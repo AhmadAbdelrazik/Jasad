@@ -2,11 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"runtime/debug"
 )
 
 func (app *Application) ServerError(w http.ResponseWriter, err error) {
-	app.errorLog.Printf("%+v", err)
+	trace := fmt.Sprintf("%s\n%s", err.Error(), debug.Stack())
+	app.errorLog.Output(2, trace)
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
@@ -26,9 +29,9 @@ func (app *Application) BadRequestForm(w http.ResponseWriter, ErrorFields map[st
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	w.WriteHeader(http.StatusUnprocessableEntity)
-	
+
 	if err := json.NewEncoder(w).Encode(errors); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

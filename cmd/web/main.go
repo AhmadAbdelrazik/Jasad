@@ -7,14 +7,15 @@ import (
 	"net/http"
 	"os"
 
-	_ "github.com/go-sql-driver/mysql"	
 	"github.com/AhmadAbdelrazik/jasad/internal/model"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type Application struct {
 	infoLog  *log.Logger
 	errorLog *log.Logger
-	Jasad *model.JasadModel
+	Muscle   *model.MuscleModel
+	Exercise *model.ExerciseModel
 }
 
 func main() {
@@ -37,7 +38,8 @@ func main() {
 	app := &Application{
 		infoLog:  infoLog,
 		errorLog: errorLog,
-		Jasad: &model.JasadModel{DB: db},
+		Muscle: &model.MuscleModel{DB: db},
+		Exercise: &model.ExerciseModel{DB: db},
 	}
 
 	srv := &http.Server{
