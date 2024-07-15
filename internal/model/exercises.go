@@ -190,3 +190,32 @@ func (e *ExerciseModel) GetAll() ([]Exercise, error) {
 	}
 	return exercises, nil
 }
+
+func (e *ExerciseModel) Delete(id uuid.UUID) error {
+	stmt := `DELETE FROM exercises WHERE id = ?`
+
+	tx, err := e.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	result, err := tx.Exec(stmt, id)
+	if err != nil {
+		tx.Rollback()
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNoRecord
+		}
+			return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if rows == 0 {
+		return ErrNoRecord
+	}
+
+	return nil
+}

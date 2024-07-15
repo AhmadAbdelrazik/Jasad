@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/AhmadAbdelrazik/jasad/internal/model"
@@ -119,7 +120,32 @@ func (app *Application) PutExercise(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) DeleteExercise(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		app.ClientError(w, http.StatusBadRequest)
+		return
+	}
 
+	err = app.Exercise.Delete(id)
+	if err != nil {
+		if err == model.ErrNoRecord {
+			app.NotFound(w)
+			return
+		} else {
+			app.ServerError(w, err)
+			return
+		}
+	}
+
+	response := struct {
+		Message string `json:"message"`
+	}{Message: fmt.Sprintf("Successfully deleted exercise with id %v", id)}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err = json.NewEncoder(w).Encode(response); err != nil {
+		app.ServerError(w, err)
+		return
+	}
 }
 
 func (app *Application) GetExercises(w http.ResponseWriter, r *http.Request) {
