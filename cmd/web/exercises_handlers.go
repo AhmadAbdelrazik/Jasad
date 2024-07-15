@@ -57,6 +57,7 @@ func (app *Application) PostExercise(w http.ResponseWriter, r *http.Request) {
 		}
 		if ErrMysql.Number == 1062 {
 			app.ClientError(w, http.StatusConflict)
+			return
 		}
 		app.ServerError(w, err)
 		return
@@ -70,6 +71,7 @@ func (app *Application) PostExercise(w http.ResponseWriter, r *http.Request) {
 		Id:      id,
 	}
 
+	app.infoLog.Printf("added new exercise with id: %v", id)
 	// return success or failure
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -140,6 +142,8 @@ func (app *Application) DeleteExercise(w http.ResponseWriter, r *http.Request) {
 	response := struct {
 		Message string `json:"message"`
 	}{Message: fmt.Sprintf("Successfully deleted exercise with id %v", id)}
+
+	app.infoLog.Printf("deleted exercise with id: %v", id)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err = json.NewEncoder(w).Encode(response); err != nil {

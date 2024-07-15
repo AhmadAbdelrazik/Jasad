@@ -192,13 +192,23 @@ func (e *ExerciseModel) GetAll() ([]Exercise, error) {
 }
 
 func (e *ExerciseModel) Delete(id uuid.UUID) error {
-	stmt := `DELETE FROM exercises WHERE id = ?`
-
+	
 	tx, err := e.DB.Begin()
 	if err != nil {
 		return err
 	}
+	
+	stmt := `DELETE FROM muscles_exercises WHERE exercise_id = ?`
+	_, err = tx.Exec(stmt, id)
+	if err != nil {
+		tx.Rollback()
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNoRecord
+		}
+			return err
+	}
 
+	stmt = `DELETE FROM exercises WHERE exercise_id = ?`
 	result, err := tx.Exec(stmt, id)
 	if err != nil {
 		tx.Rollback()
@@ -217,5 +227,9 @@ func (e *ExerciseModel) Delete(id uuid.UUID) error {
 		return ErrNoRecord
 	}
 
+	if err = tx.Commit(); err != nil {
+		tx.Rollback()
+		return err
+	}
 	return nil
 }
