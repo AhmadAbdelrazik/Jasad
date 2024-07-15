@@ -12,11 +12,55 @@ type Exercise struct {
 	ExerciseName        string    `json:"exercise_name"`
 	ExerciseDescription string    `json:"exercise_explanation"`
 	ReferenceVideo      string    `json:"reference_video"`
-	Muscles             []string  `json:"muscle_name"`
+	Muscles             []string  `json:"muscles"`
 }
 
 type ExerciseModel struct {
 	DB *sql.DB
+}
+
+func (e *ExerciseModel) Update(exerciseId uuid.UUID, exerciseName, exerciseDescription, ReferenceVideo string, muscles []string) error {
+
+	tx, err := e.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	stmt := `UPDATE exercises SET exercise_name = ?, exercise_description = ?, reference_video = ? WHERE exercise_id = ?`
+
+	_, err = tx.Exec(stmt, exerciseName, exerciseDescription, ReferenceVideo, exerciseId)
+	if err != nil {
+		tx.Rollback()
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNoRecord
+		} else {
+			return err
+		}
+	}
+
+	stmt = `DELETE FROM muscles_exercises WHERE exercise_id = ?`
+	_, err = tx.Exec(stmt, exerciseId)
+	if err != nil {
+		tx.Rollback()
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNoRecord
+		} else {
+			return err
+		}
+	}
+
+	stmt = `INSERT INTO muscles_exercises(muscle_name, exercise_id) VALUES(?, ?)`
+	for _, muscle := range muscles {
+		if _, err = tx.Exec(stmt, muscle, exerciseId); err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		tx.Rollback()
+		return err
+	}
+	return nil
 }
 
 func (e *ExerciseModel) Create(exerciseName, exerciseDescription, ReferenceVideo string, muscles []string) (uuid.UUID, error) {
@@ -156,8 +200,8 @@ func (e *ExerciseModel) GetAll() ([]Exercise, error) {
 
 	stmt = `SELECT muscle_name FROM muscles_exercises WHERE exercise_id = ?`
 
-	for _, exercise := range exercises {
-		rows, err = tx.Query(stmt, exercise.ExerciseID)
+	for i := range exercises {
+		rows, err = tx.Query(stmt, exercises[i].ExerciseID)
 		if err != nil {
 			tx.Rollback()
 			if errors.Is(err, sql.ErrNoRows) {
@@ -175,7 +219,7 @@ func (e *ExerciseModel) GetAll() ([]Exercise, error) {
 				return nil, err
 			}
 
-			exercise.Muscles = append(exercise.Muscles, muscle)
+			exercises[i].Muscles = append(exercises[i].Muscles, muscle)
 		}
 
 		if err := rows.Err(); err != nil {
@@ -192,12 +236,12 @@ func (e *ExerciseModel) GetAll() ([]Exercise, error) {
 }
 
 func (e *ExerciseModel) Delete(id uuid.UUID) error {
-	
+
 	tx, err := e.DB.Begin()
 	if err != nil {
 		return err
 	}
-	
+
 	stmt := `DELETE FROM muscles_exercises WHERE exercise_id = ?`
 	_, err = tx.Exec(stmt, id)
 	if err != nil {
@@ -205,7 +249,7 @@ func (e *ExerciseModel) Delete(id uuid.UUID) error {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrNoRecord
 		}
-			return err
+		return err
 	}
 
 	stmt = `DELETE FROM exercises WHERE exercise_id = ?`
@@ -215,7 +259,7 @@ func (e *ExerciseModel) Delete(id uuid.UUID) error {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrNoRecord
 		}
-			return err
+		return err
 	}
 	rows, err := result.RowsAffected()
 	if err != nil {

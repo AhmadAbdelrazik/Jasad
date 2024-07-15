@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type ExerciseCreateForm struct {
+type ExerciseForm struct {
 	ExerciseName        string   `json:"exercise_name"`
 	ExerciseDescription string   `json:"exercise_explanation"`
 	ReferenceVideo      string   `json:"reference_video"`
@@ -19,9 +19,65 @@ type ExerciseCreateForm struct {
 	validator.Validator
 }
 
+func (app *Application) PutExercise(w http.ResponseWriter, r *http.Request) {
+	var form ExerciseForm
+	err := json.NewDecoder(r.Body).Decode(&form)
+
+	if err != nil {
+		app.ClientError(w, http.StatusBadRequest)
+		return
+	}
+
+	defer r.Body.Close()
+
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		app.ClientError(w, http.StatusBadRequest)
+		return
+	}
+
+	CheckExerciseForm(&form)
+
+	if muscleName, err := app.Muscle.AllExist(form.Muscles); err != nil {
+		if err == model.ErrNoRecord {
+			form.AddFieldError(muscleName, "muscle doesn't exist")
+		} else {
+			app.ServerError(w, err)
+			return
+		}
+	}
+
+	if !form.Valid() {
+		app.BadRequestForm(w, form.FieldErrors)
+		return
+	}
+
+	err = app.Exercise.Update(id, form.ExerciseName, form.ExerciseDescription, form.ReferenceVideo, form.Muscles)
+	if err != nil {
+		if err == model.ErrNoRecord {
+			app.NotFound(w)
+			return
+		} else {
+			app.ServerError(w, err)
+			return
+		}
+	}
+
+	response := struct{
+		Message string `json:"message"`
+	}{Message: "exercise has been updated"}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err = json.NewEncoder(w).Encode(response); err != nil {
+		app.ServerError(w, err)
+		return
+	}
+
+}
+
 func (app *Application) PostExercise(w http.ResponseWriter, r *http.Request) {
 	// parse the body
-	var form ExerciseCreateForm
+	var form ExerciseForm
 	err := json.NewDecoder(r.Body).Decode(&form)
 
 	if err != nil {
@@ -31,7 +87,7 @@ func (app *Application) PostExercise(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// pass the form, get boolean
-	CheckExerciseCreateForm(&form)
+	CheckExerciseForm(&form)
 
 	if muscleName, err := app.Muscle.AllExist(form.Muscles); err != nil {
 		if err == model.ErrNoRecord {
@@ -105,20 +161,16 @@ func (app *Application) GetExercise(w http.ResponseWriter, r *http.Request) {
 		ReferenceVideo      string   `json:"reference_video"`
 		Muscles             []string `json:"muscles"`
 	}{
-		ExerciseName: Exercise.ExerciseName,
+		ExerciseName:        Exercise.ExerciseName,
 		ExerciseDescription: Exercise.ExerciseDescription,
-		ReferenceVideo: Exercise.ReferenceVideo,
-		Muscles: Exercise.Muscles,
+		ReferenceVideo:      Exercise.ReferenceVideo,
+		Muscles:             Exercise.Muscles,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		app.ServerError(w, err)
 	}
-}
-
-func (app *Application) PutExercise(w http.ResponseWriter, r *http.Request) {
-
 }
 
 func (app *Application) DeleteExercise(w http.ResponseWriter, r *http.Request) {
@@ -153,7 +205,7 @@ func (app *Application) DeleteExercise(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) GetExercises(w http.ResponseWriter, r *http.Request) {
-	muscles, err := app.Exercise.GetAll()
+	exercises, err := app.Exercise.GetAll()
 	if err != nil {
 		if err == model.ErrNoRecord {
 			message := struct {
@@ -172,7 +224,7 @@ func (app *Application) GetExercises(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(muscles); err != nil {
+	if err := json.NewEncoder(w).Encode(exercises); err != nil {
 		app.ServerError(w, err)
 	}
 }

@@ -7,7 +7,7 @@ import (
 )
 
 
-func CheckExerciseCreateForm(form *ExerciseCreateForm) {
+func CheckExerciseForm(form *ExerciseForm) {
 	
 	form.CheckField(validator.NotBlank(form.ExerciseName), "exercise_name", validator.MessageEmptyField)
 	form.CheckField(validator.Chars(form.ExerciseName, 5, 50), "exercise_name", validator.MessageFieldLength(5, 50))
