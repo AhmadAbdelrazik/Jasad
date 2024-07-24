@@ -10,7 +10,7 @@
             "port": 3306,
             "driver": "MySQL",
             "name": "jasad",
-            "database": "jasad_db",
+            "database": "jasad",
             "username": "ahmad"
         }
     ]
