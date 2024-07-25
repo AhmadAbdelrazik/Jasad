@@ -10,15 +10,15 @@ import (
 )
 
 // handler signature
-type apiFunc func(w http.ResponseWriter, r *http.Request) error 
-
+type apiFunc func(w http.ResponseWriter, r *http.Request) error
 
 type apiErr struct {
-	Error string `json:"error"`
+	Error  string `json:"error"`
+	status int 
 }
 
 // Error handling here
-func makeHTTPHandleFunc (f apiFunc) http.HandlerFunc {
+func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := f(w, r)
 		if err != nil {
@@ -51,7 +51,7 @@ func NewAPIServer(listenAddr string, DB Storage) *APIServer {
 	return &APIServer{
 		listenAddr: listenAddr,
 		InfoLog:    *log.New(os.Stdout, "INFO\t", log.Ltime|log.Ldate),
-		ErrorLog:   *log.New(os.Stdout, "INFO\t", log.Ltime|log.Ldate|log.Lshortfile),
+		ErrorLog:   *log.New(os.Stdout, "ERROR\t", log.Ltime|log.Ldate|log.Lshortfile),
 		DB:         DB,
 	}
 }
@@ -72,6 +72,16 @@ func (s *APIServer) HandleCreateExercise(w http.ResponseWriter, r *http.Request)
 	if err := json.NewDecoder(r.Body).Decode(&ExerciseRequest); err != nil {
 		return NewErrBadRequest()
 	}
+
+	// Validation (need to implement)
+	if err := validate.Struct(ExerciseRequest); err != nil {
+		return NewErrBadRequest()
+	}
+
+	if err := s.DB.CreateExercise(&ExerciseRequest); err != nil {
+
+	}
+
 	WriteJSON(w, http.StatusAccepted, ExerciseRequest)
 	return nil
 }
@@ -86,10 +96,9 @@ func (s *APIServer) HandleGetExerciseByID(w http.ResponseWriter, r *http.Request
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		return fmt.Errorf("invalid id: %v", idStr) 
+		return fmt.Errorf("invalid id: %v", idStr)
 	}
 
 	WriteJSON(w, http.StatusOK, &Exercise{ExerciseID: id})
 	return nil
 }
-

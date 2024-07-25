@@ -1,8 +1,16 @@
 package main
 
-import "log"
+import (
+	"log"
+	"github.com/go-playground/validator/v10"
+)
+
+
+var validate *validator.Validate
 
 func main() {
+	validate = validator.New()
+	
 	db, err := NewMySQLServer()
 	if err != nil {
 		log.Fatal(err)
