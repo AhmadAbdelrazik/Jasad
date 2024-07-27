@@ -68,9 +68,9 @@ func (s *APIServer) Run() {
 	mux.HandleFunc("POST /exercises", makeHTTPHandleFunc(s.HandleCreateExercise))
 
 	mux.HandleFunc("GET /exercises", makeHTTPHandleFunc(s.HandleGetExercises))
-	mux.HandleFunc("GET /exercises/muscle/{muscleGroup}/{muscleName}", makeHTTPHandleFunc(s.HandleGetExercises))
+	mux.HandleFunc("GET /exercises/muscle/{muscleGroup}/{muscleName}", makeHTTPHandleFunc(s.HandleGetExercisesByMuscle))
 	mux.HandleFunc("GET /exercises/id/{id}", makeHTTPHandleFunc(s.HandleGetExerciseByID))
-	mux.HandleFunc("GET /exercises/name/{name}", makeHTTPHandleFunc(s.HandleGetExerciseByID))
+	mux.HandleFunc("GET /exercises/name/{name}", makeHTTPHandleFunc(s.HandleGetExerciseByName))
 
 	mux.HandleFunc("PUT /exercises", makeHTTPHandleFunc(s.HandleUpdateExercise))
 
@@ -106,12 +106,12 @@ func (s *APIServer) HandleCreateExercise(w http.ResponseWriter, r *http.Request)
 
 func (s *APIServer) HandleGetExercises(w http.ResponseWriter, r *http.Request) error {
 
-	val, err := s.DB.GetExercises()
+	exercises, err := s.DB.GetExercises()
 	if err != nil {
 		return s.ServerError(err)
 	}
 
-	WriteJSON(w, http.StatusOK, val)
+	WriteJSON(w, http.StatusOK, exercises)
 	return nil
 }
 
@@ -147,7 +147,34 @@ func (s *APIServer) HandleGetExerciseByID(w http.ResponseWriter, r *http.Request
 		return s.BadRequest()
 	}
 
-	WriteJSON(w, http.StatusOK, &Exercise{ExerciseID: id})
+	exercise, err := s.DB.GetExerciseByID(id)
+	if err != nil {
+		if err == ErrNoRecord {
+			return s.NotFound()
+		} else {
+			return s.ServerError(err)
+		}
+	}
+
+	WriteJSON(w, http.StatusOK, exercise)
+	return nil
+}
+
+func (s *APIServer) HandleGetExerciseByName(w http.ResponseWriter, r *http.Request) error {
+	name := r.PathValue("name")
+
+	name = strings.ReplaceAll(name, "-", " ")
+
+	exercise, err := s.DB.GetExerciseByName(name)
+	if err != nil {
+		if err == ErrNoRecord {
+			return s.NotFound()
+		} else {
+			return s.ServerError(err)
+		}
+	}
+
+	WriteJSON(w, http.StatusOK, exercise)
 	return nil
 }
 

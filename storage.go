@@ -244,7 +244,7 @@ func (st *MySQL) GetExerciseByName(exerciseName string) (*Exercise, error) {
 	for rows.Next() {
 		var muscle Muscle
 
-		if err := rows.Scan(muscle.MuscleName, muscle.MuscleGroup); err != nil {
+		if err := rows.Scan(&muscle.MuscleName, &muscle.MuscleGroup); err != nil {
 			tx.Rollback()
 			return nil, err
 		}
@@ -293,7 +293,7 @@ func (st *MySQL) GetExerciseByID(ID int) (*Exercise, error) {
 	for rows.Next() {
 		var muscle Muscle
 
-		if err := rows.Scan(muscle.MuscleName, muscle.MuscleGroup); err != nil {
+		if err := rows.Scan(&muscle.MuscleName, &muscle.MuscleGroup); err != nil {
 			tx.Rollback()
 			return nil, err
 		}
@@ -402,8 +402,8 @@ func (st *MySQL) DeleteExercise(ID int) error {
 }
 
 // Checks if muscle Exists in the DB.
-// Returns nil if it's found
 // Returns ErrNoRows if not found, or error if something went wrong.
+// Returns nil if it's found
 func (st *MySQL) MuscleExists(muscle *Muscle) error {
 	tx, err := st.DB.Begin()
 	if err != nil {
