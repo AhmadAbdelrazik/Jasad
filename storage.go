@@ -224,5 +224,36 @@ func (st *MySQL) UpdateExercise(Exercise *UpdateExerciseRequest) error {
 }
 
 func (st *MySQL) DeleteExercise(ID int) error {
+	tx, err := st.DB.Begin()
+
+	if err != nil {
+		return err
+	}
+
+	stmt := `DELETE FROM muscles_exercises WHERE exercise_id = ?`
+	if _, err := tx.Exec(stmt, ID); err != nil {
+		tx.Rollback()
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNoRecord
+		} else {
+			return err
+		}
+	}
+
+	stmt = `DELETE FROM exercises WHERE exercise_id = ?`
+	if _, err := tx.Exec(stmt, ID); err != nil {
+		tx.Rollback()
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNoRecord
+		} else {
+			return err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	return nil
 }

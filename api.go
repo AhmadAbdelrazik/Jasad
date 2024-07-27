@@ -19,6 +19,10 @@ type apiErr struct {
 	Status  int    `json:"status"`
 }
 
+type apiResponse struct {
+	Message string `json:"message"`
+}
+
 func (r *apiErr) Error() string {
 	return r.Message
 }
@@ -59,12 +63,13 @@ func NewAPIServer(listenAddr string, DB Storage) *APIServer {
 func (s *APIServer) Run() {
 	mux := http.NewServeMux()
 
+	log := alice.New(s.logger)
+
 	mux.HandleFunc("POST /exercises", makeHTTPHandleFunc(s.HandleCreateExercise))
 	mux.HandleFunc("GET /exercises", makeHTTPHandleFunc(s.HandleGetExercises))
 	mux.HandleFunc("GET /exercises/{id}", makeHTTPHandleFunc(s.HandleGetExerciseByID))
 	mux.HandleFunc("PUT /exercises", makeHTTPHandleFunc(s.HandleUpdateExercise))
-
-	log := alice.New(s.logger)
+	mux.HandleFunc("DELETE /exercises/{id}", makeHTTPHandleFunc(s.HandleDeleteExercise))
 
 	http.ListenAndServe(s.listenAddr, log.Then(mux))
 }
@@ -86,11 +91,11 @@ func (s *APIServer) HandleCreateExercise(w http.ResponseWriter, r *http.Request)
 		} else if strings.Contains(err.Error(), "Duplicate entry") {
 			return s.ClientError(http.StatusConflict)
 		} else {
-			s.ServerError(err)
+			return s.ServerError(err)
 		}
 	}
 
-	WriteJSON(w, http.StatusAccepted, ExerciseRequest)
+	WriteJSON(w, http.StatusAccepted, apiResponse{Message: `exercise has been created`})
 	return nil
 }
 
@@ -110,7 +115,7 @@ func (s *APIServer) HandleGetExerciseByID(w http.ResponseWriter, r *http.Request
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		s.BadRequest()
+		return s.BadRequest()
 	}
 
 	WriteJSON(w, http.StatusOK, &Exercise{ExerciseID: id})
@@ -137,6 +142,26 @@ func (s *APIServer) HandleUpdateExercise(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	WriteJSON(w, http.StatusAccepted, exercise)
+	WriteJSON(w, http.StatusAccepted, apiResponse{Message: `exercise has been updated`})
+	return nil
+}
+
+func (s *APIServer) HandleDeleteExercise(w http.ResponseWriter, r *http.Request) error {
+	idStr := r.PathValue("id")
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return s.BadRequest()
+	}
+
+	if err := s.DB.DeleteExercise(id); err != nil {
+		if err == ErrNoRecord {
+			return s.NotFound()
+		} else {
+			return s.ServerError(err)
+		}
+	}
+
+	WriteJSON(w, http.StatusAccepted, apiResponse{Message: `exercise has been deleted`})
 	return nil
 }
