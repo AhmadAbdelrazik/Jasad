@@ -66,9 +66,14 @@ func (s *APIServer) Run() {
 	log := alice.New(s.logger)
 
 	mux.HandleFunc("POST /exercises", makeHTTPHandleFunc(s.HandleCreateExercise))
+
 	mux.HandleFunc("GET /exercises", makeHTTPHandleFunc(s.HandleGetExercises))
-	mux.HandleFunc("GET /exercises/{id}", makeHTTPHandleFunc(s.HandleGetExerciseByID))
+	mux.HandleFunc("GET /exercises/muscle/{muscleGroup}/{muscleName}", makeHTTPHandleFunc(s.HandleGetExercises))
+	mux.HandleFunc("GET /exercises/id/{id}", makeHTTPHandleFunc(s.HandleGetExerciseByID))
+	mux.HandleFunc("GET /exercises/name/{name}", makeHTTPHandleFunc(s.HandleGetExerciseByID))
+
 	mux.HandleFunc("PUT /exercises", makeHTTPHandleFunc(s.HandleUpdateExercise))
+
 	mux.HandleFunc("DELETE /exercises/{id}", makeHTTPHandleFunc(s.HandleDeleteExercise))
 
 	http.ListenAndServe(s.listenAddr, log.Then(mux))
@@ -107,6 +112,30 @@ func (s *APIServer) HandleGetExercises(w http.ResponseWriter, r *http.Request) e
 	}
 
 	WriteJSON(w, http.StatusOK, val)
+	return nil
+}
+
+func (s *APIServer) HandleGetExercisesByMuscle(w http.ResponseWriter, r *http.Request) error {
+	var muscle Muscle
+
+	muscle.MuscleGroup = r.PathValue("muscleGroup")
+	muscle.MuscleName = r.PathValue("muscleName")
+
+	if err := s.DB.MuscleExists(&muscle); err != nil {
+		return s.BadRequest()
+	}
+
+	exercises, err := s.DB.GetExercisesByMuscle(muscle)
+	if err != nil {
+		if err == ErrNoRecord {
+			return s.NotFound()
+		} else {
+			return s.ServerError(err)
+		}
+	}
+
+	WriteJSON(w, http.StatusOK, exercises)
+
 	return nil
 }
 
