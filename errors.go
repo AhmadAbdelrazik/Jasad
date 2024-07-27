@@ -1,35 +1,24 @@
 package main
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+	"runtime/debug"
+)
 
-type ErrBadRequest struct {
-	Status  int
-	Message string
+func (app *APIServer) ServerError(err error) *apiErr {
+	trace := fmt.Sprintf("%s\n%s", err, debug.Stack())
+	app.ErrorLog.Output(2, trace)
+	return &apiErr{Message: http.StatusText(http.StatusInternalServerError), Status: http.StatusInternalServerError}
 }
 
-func NewErrBadRequest() *ErrBadRequest {
-	return &ErrBadRequest{
-		Message: "Bad Request",
-		Status: http.StatusBadRequest,
-	}
+func (app *APIServer) ClientError(code int) *apiErr {
+	return &apiErr{Message: http.StatusText(code), Status: code}
 }
 
-func (r ErrBadRequest) Error() string {
-	return r.Message
+func (app *APIServer) BadRequest() *apiErr {
+	return app.ClientError(http.StatusBadRequest)
 }
-
-type ErrNotFound struct {
-	Status  int
-	Message string
-}
-
-func NewErrNotFound(message string) *ErrNotFound {
-	return &ErrNotFound{
-		Message: message,
-		Status: http.StatusNotFound,
-	}
-}
-
-func (r ErrNotFound) Error() string {
-	return r.Message
+func (app *APIServer) NotFound() *apiErr {
+	return app.ClientError(http.StatusNotFound)
 }

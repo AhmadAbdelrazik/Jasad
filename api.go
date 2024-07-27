@@ -2,34 +2,34 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
+
+	"github.com/justinas/alice"
 )
 
 // handler signature
 type apiFunc func(w http.ResponseWriter, r *http.Request) error
 
 type apiErr struct {
-	Error  string `json:"error"`
-	status int 
+	Message string `json:"error"`
+	Status  int    `json:"status"`
+}
+
+func (r *apiErr) Error() string {
+	return r.Message
 }
 
 // Error handling here
 func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := f(w, r)
-		if err != nil {
-			switch i := err.(type) {
-			case ErrBadRequest:
-				WriteJSON(w, i.Status, apiErr{Error: i.Message})
-			case ErrNotFound:
-				WriteJSON(w, i.Status, apiErr{Error: i.Message})
-			default:
-				WriteJSON(w, http.StatusBadRequest, apiErr{Error: i.Error()})
-			}
+		switch i := err.(type) {
+		case *apiErr:
+			WriteJSON(w, i.Status, i)
 		}
 	}
 }
@@ -59,27 +59,35 @@ func NewAPIServer(listenAddr string, DB Storage) *APIServer {
 func (s *APIServer) Run() {
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("POST /exercises", makeHTTPHandleFunc(s.HandleCreateExercise))
 	mux.HandleFunc("GET /exercises", makeHTTPHandleFunc(s.HandleGetExercises))
 	mux.HandleFunc("GET /exercises/{id}", makeHTTPHandleFunc(s.HandleGetExerciseByID))
+	mux.HandleFunc("PUT /exercises", makeHTTPHandleFunc(s.HandleUpdateExercise))
 
-	mux.HandleFunc("POST /exercises", makeHTTPHandleFunc(s.HandleCreateExercise))
+	log := alice.New(s.logger)
 
-	http.ListenAndServe(s.listenAddr, mux)
+	http.ListenAndServe(s.listenAddr, log.Then(mux))
 }
 
 func (s *APIServer) HandleCreateExercise(w http.ResponseWriter, r *http.Request) error {
 	ExerciseRequest := CreateExerciseRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&ExerciseRequest); err != nil {
-		return NewErrBadRequest()
+		return s.BadRequest()
 	}
+	r.Body.Close()
 
-	// Validation (need to implement)
 	if err := validate.Struct(ExerciseRequest); err != nil {
-		return NewErrBadRequest()
+		return s.BadRequest()
 	}
 
 	if err := s.DB.CreateExercise(&ExerciseRequest); err != nil {
-
+		if err == ErrNoRecord {
+			return s.BadRequest()
+		} else if strings.Contains(err.Error(), "Duplicate entry") {
+			return s.ClientError(http.StatusConflict)
+		} else {
+			s.ServerError(err)
+		}
 	}
 
 	WriteJSON(w, http.StatusAccepted, ExerciseRequest)
@@ -87,7 +95,13 @@ func (s *APIServer) HandleCreateExercise(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *APIServer) HandleGetExercises(w http.ResponseWriter, r *http.Request) error {
-	WriteJSON(w, http.StatusOK, &Exercise{})
+
+	val, err := s.DB.GetExercises()
+	if err != nil {
+		return s.ServerError(err)
+	}
+
+	WriteJSON(w, http.StatusOK, val)
 	return nil
 }
 
@@ -96,9 +110,33 @@ func (s *APIServer) HandleGetExerciseByID(w http.ResponseWriter, r *http.Request
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		return fmt.Errorf("invalid id: %v", idStr)
+		s.BadRequest()
 	}
 
 	WriteJSON(w, http.StatusOK, &Exercise{ExerciseID: id})
+	return nil
+}
+
+func (s *APIServer) HandleUpdateExercise(w http.ResponseWriter, r *http.Request) error {
+	exercise := UpdateExerciseRequest{}
+
+	if err := json.NewDecoder(r.Body).Decode(&exercise); err != nil {
+		return s.BadRequest()
+	}
+	r.Body.Close()
+
+	if err := validate.Struct(exercise); err != nil {
+		return s.BadRequest()
+	}
+
+	if err := s.DB.UpdateExercise(&exercise); err != nil {
+		if err == ErrNoRecord {
+			return s.NotFound()
+		} else {
+			return s.ServerError(err)
+		}
+	}
+
+	WriteJSON(w, http.StatusAccepted, exercise)
 	return nil
 }

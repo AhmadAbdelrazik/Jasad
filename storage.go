@@ -11,8 +11,9 @@ var ErrNoRecord = errors.New("no records found")
 
 type Storage interface {
 	CreateExercise(*CreateExerciseRequest) error
-	GetExercise(int) (*Exercise, error)
-	UpdateExercise(*CreateExerciseRequest) error
+	GetExercise(string) (*Exercise, error)
+	GetExercises() ([]Exercise, error)
+	UpdateExercise(*UpdateExerciseRequest) error
 	DeleteExercise(int) error
 	MuscleExists(*Muscle) error
 }
@@ -80,7 +81,7 @@ func (st *MySQL) CreateExercise(ExerciseRequest *CreateExerciseRequest) error {
 		return err
 	}
 
-	stmt = `INSERT INTO muscles_exercises(muscle_name, muscle_group, exercise_id), VALUES (?,?,?)`
+	stmt = `INSERT INTO muscles_exercises(muscle_name, muscle_group, exercise_id) VALUES (?,?,?)`
 
 	for _, muscle := range ExerciseRequest.Muscles {
 		if _, err := tx.Exec(stmt, muscle.MuscleName, muscle.MuscleGroup, int(id)); err != nil {
@@ -96,16 +97,132 @@ func (st *MySQL) CreateExercise(ExerciseRequest *CreateExerciseRequest) error {
 	return nil
 }
 
-func (st *MySQL) GetExercises(rows *sql.Rows) ([]Exercise, error) {
-	return nil, nil
+func (st *MySQL) GetExercises() ([]Exercise, error) {
+	tx, err := st.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	stmt := `SELECT exercise_id, exercise_name, exercise_description, reference_video FROM exercises`
+	rows, err := tx.Query(stmt)
+	if err != nil {
+		tx.Rollback()
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNoRecord
+		} else {
+			return nil, err
+		}
+	}
+
+	exercises := []Exercise{}
+
+	for rows.Next() {
+		exercise := Exercise{}
+		err := rows.Scan(&exercise.ExerciseID, &exercise.ExerciseName, &exercise.ExerciseDescription, &exercise.ReferenceVideo)
+		if err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+
+		exercises = append(exercises, exercise)
+	}
+	if err := rows.Err(); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	stmt = `SELECT muscle_name, muscle_group from muscles_exercises WHERE exercise_id = ?`
+
+	for i := range exercises {
+		rows, err := tx.Query(stmt, exercises[i].ExerciseID)
+		if err != nil {
+			tx.Rollback()
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, ErrNoRecord
+			} else {
+				return nil, err
+			}
+		}
+
+		var muscles []Muscle
+
+		for rows.Next() {
+			var muscle Muscle
+			if err := rows.Scan(&muscle.MuscleName, &muscle.MuscleGroup); err != nil {
+				tx.Rollback()
+				return nil, err
+			}
+			muscles = append(muscles, muscle)
+		}
+
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+
+		exercises[i].Muscles = muscles
+	}
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	return exercises, nil
 }
 
-func (st *MySQL) GetExercise(ID int) (*Exercise, error) {
+func (st *MySQL) GetExercise(name string) (*Exercise, error) {
 	return nil, nil
 }
-func (st *MySQL) UpdateExercise(ExerciseRequest *CreateExerciseRequest) error {
+func (st *MySQL) UpdateExercise(Exercise *UpdateExerciseRequest) error {
+	for _, muscle := range Exercise.Muscles {
+		if err := st.MuscleExists(&muscle); err != nil {
+			return err
+		}
+	}
+
+	tx, err := st.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	stmt := `UPDATE exercises
+	SET 
+	exercise_name = ?,
+	exercise_description = ?,
+	reference_video = ?
+	WHERE exercise_id = ?`
+
+	_, err = tx.Exec(stmt, Exercise.ExerciseName, Exercise.ExerciseDescription, Exercise.ReferenceVideo, Exercise.ExerciseID)
+	if err != nil {
+		tx.Rollback()
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNoRecord
+		} else {
+			return err
+		}
+	}
+
+	stmt = `DELETE FROM muscles_exercises WHERE exercise_id = ?`
+	_, err = tx.Exec(stmt, Exercise.ExerciseID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	stmt = `INSERT INTO muscles_exercises(exercise_id, muscle_name, muscle_group) VALUES (?,?,?)`
+	for _, muscle := range Exercise.Muscles {
+		if _, err := tx.Exec(stmt, Exercise.ExerciseID, muscle.MuscleName, muscle.MuscleGroup); err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return err
+	}
 	return nil
 }
+
 func (st *MySQL) DeleteExercise(ID int) error {
 	return nil
 }
