@@ -23,6 +23,8 @@ type Storage interface {
 	DeleteExercise(int) error
 	// Helpers
 	MuscleExists(*Muscle) error
+
+	CreateUser(*CreateUserRequest) error
 }
 
 type MySQL struct {
@@ -32,7 +34,7 @@ type MySQL struct {
 // Initalize New MySQL Database, inject it in the APIServer instance.
 // returns the MySQL Database or an error
 func NewMySQLDatabase() (*MySQL, error) {
-	dsn := `ahmad:password@/jasad`
+	dsn := `ahmad:password@/jasad?parseTime=true`
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
@@ -421,5 +423,16 @@ func (st *MySQL) MuscleExists(muscle *Muscle) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (st *MySQL) CreateUser(user *CreateUserRequest) error {
+	tx, err := st.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	stmt := `INSERT INTO users(user_id, user_name, password, role, created_at)`
+
 	return nil
 }
