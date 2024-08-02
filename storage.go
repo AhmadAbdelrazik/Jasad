@@ -3,8 +3,10 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
 )
 
 var ErrNoRecord = errors.New("no records found")
@@ -24,7 +26,7 @@ type Storage interface {
 	// Helpers
 	MuscleExists(*Muscle) error
 
-	CreateUser(*CreateUserRequest) error
+	CreateUser(*CreateUserRequest) (uuid.UUID, error)
 }
 
 type MySQL struct {
@@ -426,13 +428,29 @@ func (st *MySQL) MuscleExists(muscle *Muscle) error {
 	return nil
 }
 
-func (st *MySQL) CreateUser(user *CreateUserRequest) error {
+func (st *MySQL) CreateUser(user *CreateUserRequest) (uuid.UUID, error) {
 	tx, err := st.DB.Begin()
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
-	stmt := `INSERT INTO users(user_id, user_name, password, role, created_at)`
+	hash, err := HashUserPasswords(user.Password, user.UserName)
+	if err != nil {
+		return uuid.Nil, err
+	}
 
-	return nil
+	userID := uuid.New()
+	stmt := `INSERT INTO users(user_id, user_name, password, role, created_at) VALUES (?,?,?,?,?)`
+
+	_, err = tx.Exec(stmt, userID.String(), user.UserName, hash, "user", time.Now())
+	if err != nil {
+		tx.Rollback()
+		return uuid.Nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return uuid.Nil, err
+	}
+
+	return userID, nil
 }

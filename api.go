@@ -221,3 +221,50 @@ func (s *APIServer) HandleDeleteExercise(w http.ResponseWriter, r *http.Request)
 	WriteJSON(w, http.StatusAccepted, apiResponse{Message: `exercise has been deleted`})
 	return nil
 }
+
+func (s *APIServer) HandleCreateUser(w http.ResponseWriter, r *http.Request) error {
+	// Read Input.
+	userRequest := CreateUserRequest{}
+
+	if err := json.NewDecoder(r.Body).Decode(&userRequest); err != nil {
+		return s.BadRequest()
+	}
+
+	// Validate Struct
+	if err := validate.Struct(userRequest); err != nil {
+		return s.BadRequest()
+	}
+
+	// Add user to database
+	userID, err := s.DB.CreateUser(&userRequest)
+
+	if err != nil {
+		if err == ErrNoRecord {
+			return s.BadRequest()
+		} else if strings.Contains(err.Error(), "Duplicate entry") {
+			return s.ClientError(http.StatusConflict)
+		} else {
+			return s.ServerError(err)
+		}
+	}
+
+	// produce token
+	token, err := IssueUserJWT(userID.String(), "user")
+	if err != nil {
+		return s.ServerError(err)
+	}
+
+	// send token
+
+	Response := &struct {
+		Message string `json:"message"`
+		Token   string `json:"token"`
+	}{
+		Message: "user has been created",
+		Token:   token,
+	}
+
+	WriteJSON(w, http.StatusCreated, Response)
+
+	return nil
+}
