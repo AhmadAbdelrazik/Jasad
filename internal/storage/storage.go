@@ -1,4 +1,4 @@
-package main
+package storage
 
 import (
 	"database/sql"
@@ -440,7 +440,7 @@ func (st *MySQL) CreateUser(user *CreateUserRequest) (uuid.UUID, error) {
 	}
 
 	userID := uuid.New()
-	stmt := `INSERT INTO users(user_id, user_name, password, role, created_at) VALUES (?,?,?,?,?)`
+	stmt := `INSERT INTO users(user_id, username, password, role, created_at) VALUES (?,?,?,?,?)`
 
 	_, err = tx.Exec(stmt, userID.String(), user.UserName, hash, "user", time.Now())
 	if err != nil {

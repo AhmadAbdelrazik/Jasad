@@ -1,6 +1,8 @@
-package main
+package api
 
-import "github.com/alexedwards/argon2id"
+import (
+	"github.com/alexedwards/argon2id"
+)
 
 func HashUserPasswords(password, username string) (string, error) {
 

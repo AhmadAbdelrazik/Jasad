@@ -6,6 +6,3 @@ run: build
 
 test:
 	@go test -v ./...
-
-play:
-	@go run playground.go
