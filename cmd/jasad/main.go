@@ -18,7 +18,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server := api.NewAPIServer(":3000", db)
+	server := api.NewAPIServer(":3000", db, validate)
 	server.InfoLog.Println("Server is listening on port 3000")
 	server.Run()
 }

@@ -3,55 +3,12 @@ package storage
 import (
 	"database/sql"
 	"errors"
-	"time"
-
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/google/uuid"
 )
-
-var ErrNoRecord = errors.New("no records found")
-
-type Storage interface {
-	// Create Operations
-	CreateExercise(*CreateExerciseRequest) error
-	// Get Operations
-	GetExercises() ([]Exercise, error)
-	GetExercisesByMuscle(Muscle) ([]Exercise, error)
-	GetExerciseByID(int) (*Exercise, error)
-	GetExerciseByName(string) (*Exercise, error)
-	// Update Operations
-	UpdateExercise(*UpdateExerciseRequest) error
-	// Delete Operations
-	DeleteExercise(int) error
-	// Helpers
-	MuscleExists(*Muscle) error
-
-	CreateUser(*CreateUserRequest) (uuid.UUID, error)
-}
-
-type MySQL struct {
-	DB *sql.DB
-}
-
-// Initalize New MySQL Database, inject it in the APIServer instance.
-// returns the MySQL Database or an error
-func NewMySQLDatabase() (*MySQL, error) {
-	dsn := `ahmad:password@/jasad?parseTime=true`
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		return nil, err
-	}
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-
-	return &MySQL{DB: db}, nil
-}
 
 // Creates an exercise and store it in the database
 // It accepts a CreateExerciseRequest struct
 // returns nil in success or an error
-func (st *MySQL) CreateExercise(ExerciseRequest *CreateExerciseRequest) error {
+func (st *MySQL) CreateExercise(ExerciseRequest *ExerciseCreateRequest) error {
 	tx, err := st.DB.Begin()
 	if err != nil {
 		return err
@@ -316,7 +273,7 @@ func (st *MySQL) GetExerciseByID(ID int) (*Exercise, error) {
 // Updates an Exercise using Exercise ID.
 // Accepts an UpdateExerciseRequest struct.
 // Returns nil upon success or error.
-func (st *MySQL) UpdateExercise(Exercise *UpdateExerciseRequest) error {
+func (st *MySQL) UpdateExercise(Exercise *ExerciseUpdateRequest) error {
 	for _, muscle := range Exercise.Muscles {
 		if err := st.MuscleExists(&muscle); err != nil {
 			return err
@@ -403,54 +360,4 @@ func (st *MySQL) DeleteExercise(ID int) error {
 	}
 
 	return nil
-}
-
-// Checks if muscle Exists in the DB.
-// Returns ErrNoRows if not found, or error if something went wrong.
-// Returns nil if it's found
-func (st *MySQL) MuscleExists(muscle *Muscle) error {
-	tx, err := st.DB.Begin()
-	if err != nil {
-		return err
-	}
-
-	stmt := `SELECT muscle_name, muscle_group FROM muscles WHERE muscle_name = ? AND muscle_group = ?`
-	row := tx.QueryRow(stmt, muscle.MuscleName, muscle.MuscleGroup)
-	m := &Muscle{}
-	if err := row.Scan(&m.MuscleName, &m.MuscleGroup); err != nil {
-		tx.Rollback()
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrNoRecord
-		} else {
-			return err
-		}
-	}
-	return nil
-}
-
-func (st *MySQL) CreateUser(user *CreateUserRequest) (uuid.UUID, error) {
-	tx, err := st.DB.Begin()
-	if err != nil {
-		return uuid.Nil, err
-	}
-
-	hash, err := HashUserPasswords(user.Password, user.UserName)
-	if err != nil {
-		return uuid.Nil, err
-	}
-
-	userID := uuid.New()
-	stmt := `INSERT INTO users(user_id, username, password, role, created_at) VALUES (?,?,?,?,?)`
-
-	_, err = tx.Exec(stmt, userID.String(), user.UserName, hash, "user", time.Now())
-	if err != nil {
-		tx.Rollback()
-		return uuid.Nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return uuid.Nil, err
-	}
-
-	return userID, nil
 }

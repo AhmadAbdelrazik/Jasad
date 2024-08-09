@@ -11,8 +11,6 @@ import (
 	"github.com/justinas/alice"
 )
 
-var validate *validator.Validate
-
 // handler signature
 type apiFunc func(w http.ResponseWriter, r *http.Request) error
 
@@ -51,14 +49,16 @@ type APIServer struct {
 	InfoLog    log.Logger
 	ErrorLog   log.Logger
 	DB         storage.Storage
+	Validate   *validator.Validate
 }
 
-func NewAPIServer(listenAddr string, DB storage.Storage) *APIServer {
+func NewAPIServer(listenAddr string, DB storage.Storage, validate *validator.Validate) *APIServer {
 	return &APIServer{
 		listenAddr: listenAddr,
 		InfoLog:    *log.New(os.Stdout, "INFO\t", log.Ltime|log.Ldate),
 		ErrorLog:   *log.New(os.Stdout, "ERROR\t", log.Ltime|log.Ldate|log.Lshortfile),
 		DB:         DB,
+		Validate:   validate,
 	}
 }
 
@@ -68,6 +68,7 @@ func (s *APIServer) Run() {
 	log := alice.New(s.logger)
 
 	mux.HandleFunc("POST /signup", makeHTTPHandleFunc(s.HandleSignup))
+	mux.HandleFunc("POST /signin", makeHTTPHandleFunc(s.HandleSignIn))
 
 	mux.HandleFunc("POST /exercises", makeHTTPHandleFunc(s.HandleCreateExercise))
 

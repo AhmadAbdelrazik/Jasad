@@ -10,13 +10,13 @@ import (
 )
 
 func (s *APIServer) HandleCreateExercise(w http.ResponseWriter, r *http.Request) error {
-	ExerciseRequest := storage.CreateExerciseRequest{}
+	ExerciseRequest := storage.ExerciseCreateRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&ExerciseRequest); err != nil {
 		return s.BadRequest()
 	}
 	r.Body.Close()
 
-	if err := validate.Struct(ExerciseRequest); err != nil {
+	if err := s.Validate.Struct(ExerciseRequest); err != nil {
 		return s.BadRequest()
 	}
 
@@ -109,14 +109,14 @@ func (s *APIServer) HandleGetExerciseByName(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *APIServer) HandleUpdateExercise(w http.ResponseWriter, r *http.Request) error {
-	exercise := storage.UpdateExerciseRequest{}
+	exercise := storage.ExerciseUpdateRequest{}
 
 	if err := json.NewDecoder(r.Body).Decode(&exercise); err != nil {
 		return s.BadRequest()
 	}
 	r.Body.Close()
 
-	if err := validate.Struct(exercise); err != nil {
+	if err := s.Validate.Struct(exercise); err != nil {
 		return s.BadRequest()
 	}
 
@@ -149,52 +149,5 @@ func (s *APIServer) HandleDeleteExercise(w http.ResponseWriter, r *http.Request)
 	}
 
 	WriteJSON(w, http.StatusAccepted, apiResponse{Message: `exercise has been deleted`})
-	return nil
-}
-
-func (s *APIServer) HandleSignup(w http.ResponseWriter, r *http.Request) error {
-	// Read Input.
-	userRequest := storage.CreateUserRequest{}
-
-	if err := json.NewDecoder(r.Body).Decode(&userRequest); err != nil {
-		return s.BadRequest()
-	}
-
-	// Validate Struct
-	if err := validate.Struct(userRequest); err != nil {
-		return s.BadRequest()
-	}
-
-	// Add user to database
-	userID, err := s.DB.CreateUser(&userRequest)
-
-	if err != nil {
-		if err == storage.ErrNoRecord {
-			return s.BadRequest()
-		} else if strings.Contains(err.Error(), "Duplicate entry") {
-			return s.ClientError(http.StatusConflict)
-		} else {
-			return s.ServerError(err)
-		}
-	}
-
-	// produce token
-	token, err := IssueUserJWT(userID.String(), "user")
-	if err != nil {
-		return s.ServerError(err)
-	}
-
-	// send token
-
-	Response := &struct {
-		Message string `json:"message"`
-		Token   string `json:"token"`
-	}{
-		Message: "user has been created",
-		Token:   token,
-	}
-
-	WriteJSON(w, http.StatusCreated, Response)
-
 	return nil
 }

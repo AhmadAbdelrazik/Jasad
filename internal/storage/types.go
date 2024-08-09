@@ -15,7 +15,7 @@ type Exercise struct {
 	Muscles             []Muscle `json:"muscles"`
 }
 
-type UpdateExerciseRequest struct {
+type ExerciseUpdateRequest struct {
 	ExerciseID          int      `json:"exerciseID" validate:"required,gt=0"`
 	ExerciseName        string   `json:"exerciseName" validate:"required,min=3,max=30"`
 	ExerciseDescription string   `json:"exerciseDescription" validate:"required,max=300"`
@@ -23,7 +23,7 @@ type UpdateExerciseRequest struct {
 	Muscles             []Muscle `json:"muscles"`
 }
 
-type CreateExerciseRequest struct {
+type ExerciseCreateRequest struct {
 	ExerciseName        string   `json:"exerciseName" validate:"required,min=3,max=30"`
 	ExerciseDescription string   `json:"exerciseDescription" validate:"required,max=300"`
 	ReferenceVideo      string   `json:"referenceVideo" validate:"required,url"`
@@ -39,7 +39,12 @@ type User struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
-type CreateUserRequest struct {
+type UserCreateRequest struct {
+	UserName string `json:"username" validate:"required,min=8,max=32"`
+	Password string `json:"password" validate:"required,min=8,max=32"`
+}
+
+type UserSigninRequest struct {
 	UserName string `json:"username" validate:"required,min=8,max=32"`
 	Password string `json:"password" validate:"required,min=8,max=32"`
 }
