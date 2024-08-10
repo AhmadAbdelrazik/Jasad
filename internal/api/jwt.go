@@ -15,14 +15,14 @@ type UserClaims struct {
 // in environment variables and call it using os.Getenv("key-name")
 var key = []byte("69zDfhhZUxnNl63VqmV3EQWja9++RsqORbltMyeTMVHm")
 
-func SignJWT(claims UserClaims, secret []byte) (string, error) {
+func SignJWT(claims *UserClaims, secret []byte) (string, error) {
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	return t.SignedString(secret)
 }
 
 func IssueUserJWT(userID, role string, secret []byte) (string, error) {
-	claims := UserClaims{
+	claims := &UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        userID,
 			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),

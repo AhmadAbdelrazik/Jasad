@@ -46,26 +46,20 @@ func WriteJSON(w http.ResponseWriter, status int, v any) {
 }
 
 type APIServer struct {
-	config     *config.Configuration
-	listenAddr string
-	InfoLog    log.Logger
-	ErrorLog   log.Logger
-	DB         storage.Storage
-	Validate   *validator.Validate
+	config   *config.Configuration
+	InfoLog  log.Logger
+	ErrorLog log.Logger
+	DB       storage.Storage
+	Validate *validator.Validate
 }
 
-func NewAPIServer(listenAddr string, DB storage.Storage, validate *validator.Validate) *APIServer {
-	config, err := config.NewConfig()
-	if err != nil {
-		panic(err)
-	}
+func NewAPIServer(config *config.Configuration, DB storage.Storage, validate *validator.Validate) *APIServer {
 	return &APIServer{
-		config:     config,
-		listenAddr: listenAddr,
-		InfoLog:    *log.New(os.Stdout, "INFO\t", log.Ltime|log.Ldate),
-		ErrorLog:   *log.New(os.Stdout, "ERROR\t", log.Ltime|log.Ldate|log.Lshortfile),
-		DB:         DB,
-		Validate:   validate,
+		config:   config,
+		InfoLog:  *log.New(os.Stdout, "INFO\t", log.Ltime|log.Ldate),
+		ErrorLog: *log.New(os.Stdout, "ERROR\t", log.Ltime|log.Ldate|log.Lshortfile),
+		DB:       DB,
+		Validate: validate,
 	}
 }
 
@@ -88,5 +82,5 @@ func (s *APIServer) Run() {
 
 	mux.HandleFunc("DELETE /exercises/{id}", makeHTTPHandleFunc(s.HandleDeleteExercise))
 
-	http.ListenAndServe(s.listenAddr, log.Then(mux))
+	http.ListenAndServe(s.config.Port, log.Then(mux))
 }
