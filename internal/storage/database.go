@@ -9,7 +9,7 @@ import (
 )
 
 var ErrNoRecord = errors.New("no records found")
-var ErrInvalidCredentials = errors.New("invalid credentials")
+var ErrInvalidCredentials = errors.New("no records found")
 
 type Storage interface {
 	// Create Operations
@@ -36,8 +36,7 @@ type MySQL struct {
 
 // Initalize New MySQL Database, inject it in the APIServer instance.
 // returns the MySQL Database or an error
-func NewMySQLDatabase() (*MySQL, error) {
-	dsn := `ahmad:password@/jasad?parseTime=true`
+func NewMySQLDatabase(dsn string) (*MySQL, error) {
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
