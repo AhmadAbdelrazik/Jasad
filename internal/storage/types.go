@@ -48,3 +48,9 @@ type UserSigninRequest struct {
 	UserName string `json:"username" validate:"required,min=8,max=32"`
 	Password string `json:"password" validate:"required,min=8,max=32"`
 }
+
+type UserJWT struct {
+	UserName string `json:"username"`
+	Role     string `json:"role"`
+	UserID   string `json:"userID"`
+}

@@ -17,6 +17,8 @@ func (s *APIServer) HandleSignup(w http.ResponseWriter, r *http.Request) error {
 		return s.BadRequest()
 	}
 
+	defer r.Body.Close()
+
 	// Validate Struct
 	if err := s.Validate.Struct(userRequest); err != nil {
 		return s.BadRequest()
@@ -63,6 +65,8 @@ func (s *APIServer) HandleSignIn(w http.ResponseWriter, r *http.Request) error {
 	if err := json.NewDecoder(r.Body).Decode(&userSigninRequest); err != nil {
 		return s.BadRequest()
 	}
+
+	defer r.Body.Close()
 
 	// validate Request
 	if err := s.Validate.Struct(userSigninRequest); err != nil {

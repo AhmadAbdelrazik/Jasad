@@ -67,3 +67,28 @@ func (st *MySQL) CheckUserExists(user *UserSigninRequest) (uuid.UUID, error) {
 		return uuid.Nil, ErrInvalidCredentials
 	}
 }
+
+func (st *MySQL) GetUserByID(userID uuid.UUID) (*UserJWT, error) {
+	tx, err := st.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	stmt := `SELECT username, role FROM users WHERE user_id = ?`
+
+	row := tx.QueryRow(stmt, userID)
+
+	user := &UserJWT{
+		UserID: userID.String(),
+	}
+
+	if err := row.Scan(&user.UserName, &user.Role); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNoRecord
+		} else {
+			return nil, err
+		}
+	}
+
+	return user, nil
+}
