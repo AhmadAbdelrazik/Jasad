@@ -15,13 +15,13 @@ type UserClaims struct {
 // in environment variables and call it using os.Getenv("key-name")
 var key = []byte("69zDfhhZUxnNl63VqmV3EQWja9++RsqORbltMyeTMVHm")
 
-func SignJWT(claims UserClaims) (string, error) {
+func SignJWT(claims UserClaims, secret []byte) (string, error) {
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	return t.SignedString(key)
+	return t.SignedString(secret)
 }
 
-func IssueUserJWT(userID, role string) (string, error) {
+func IssueUserJWT(userID, role string, secret []byte) (string, error) {
 	claims := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        userID,
@@ -30,12 +30,12 @@ func IssueUserJWT(userID, role string) (string, error) {
 		},
 	}
 
-	return SignJWT(claims)
+	return SignJWT(claims, secret)
 }
 
-func VerifyJWT(tokenString string) (*UserClaims, error) {
+func VerifyJWT(tokenString string, secret []byte) (*UserClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(t *jwt.Token) (interface{}, error) {
-		return key, nil
+		return secret, nil
 	})
 
 	if err != nil {

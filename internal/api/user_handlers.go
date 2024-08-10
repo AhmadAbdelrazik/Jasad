@@ -38,7 +38,7 @@ func (s *APIServer) HandleSignup(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// produce token
-	token, err := IssueUserJWT(userID.String(), "user")
+	token, err := IssueUserJWT(userID.String(), "user", []byte(s.config.AccessToken))
 	if err != nil {
 		return s.ServerError(err)
 	}
@@ -85,7 +85,7 @@ func (s *APIServer) HandleSignIn(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// produce token
-	token, err := IssueUserJWT(userID.String(), "user")
+	token, err := IssueUserJWT(userID.String(), "user", []byte(s.config.AccessToken))
 	if err != nil {
 		return s.ServerError(err)
 	}

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/AhmadAbdelrazik/jasad/internal/config"
 	"github.com/AhmadAbdelrazik/jasad/internal/storage"
 	"github.com/go-playground/validator/v10"
 	"github.com/justinas/alice"
@@ -45,6 +46,7 @@ func WriteJSON(w http.ResponseWriter, status int, v any) {
 }
 
 type APIServer struct {
+	config     *config.Configuration
 	listenAddr string
 	InfoLog    log.Logger
 	ErrorLog   log.Logger
@@ -53,7 +55,12 @@ type APIServer struct {
 }
 
 func NewAPIServer(listenAddr string, DB storage.Storage, validate *validator.Validate) *APIServer {
+	config, err := config.NewConfig()
+	if err != nil {
+		panic(err)
+	}
 	return &APIServer{
+		config:     config,
 		listenAddr: listenAddr,
 		InfoLog:    *log.New(os.Stdout, "INFO\t", log.Ltime|log.Ldate),
 		ErrorLog:   *log.New(os.Stdout, "ERROR\t", log.Ltime|log.Ldate|log.Lshortfile),
