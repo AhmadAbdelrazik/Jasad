@@ -9,38 +9,38 @@ import (
 	"github.com/AhmadAbdelrazik/jasad/internal/storage"
 )
 
-func (s *APIServer) HandleSignup(w http.ResponseWriter, r *http.Request) error {
+func (a *Application) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	// Read Input.
 	userRequest := storage.UserCreateRequest{}
 
 	if err := json.NewDecoder(r.Body).Decode(&userRequest); err != nil {
-		return s.BadRequest()
+		a.BadRequest(w)
 	}
 
 	defer r.Body.Close()
 
 	// Validate Struct
-	if err := s.Validate.Struct(userRequest); err != nil {
-		return s.BadRequest()
+	if err := a.Validate.Struct(userRequest); err != nil {
+		a.BadRequest(w)
 	}
 
 	// Add user to database
-	userID, err := s.DB.CreateUser(&userRequest)
+	userID, err := a.DB.CreateUser(&userRequest)
 
 	if err != nil {
 		if err == storage.ErrNoRecord {
-			return s.BadRequest()
+			a.BadRequest(w)
 		} else if strings.Contains(err.Error(), "Duplicate entry") {
-			return s.ClientError(http.StatusConflict)
+			a.ClientError(w, http.StatusConflict)
 		} else {
-			return s.ServerError(err)
+			a.ServerError(w, err)
 		}
 	}
 
 	// produce token
-	token, err := IssueUserJWT(userID.String(), "user", []byte(s.config.AccessToken))
+	token, err := IssueUserJWT(userID.String(), "user", []byte(a.Config.AccessToken))
 	if err != nil {
-		return s.ServerError(err)
+		a.ServerError(w, err)
 	}
 
 	// send token
@@ -55,39 +55,38 @@ func (s *APIServer) HandleSignup(w http.ResponseWriter, r *http.Request) error {
 
 	WriteJSON(w, http.StatusCreated, Response)
 
-	return nil
 }
 
-func (s *APIServer) HandleSignIn(w http.ResponseWriter, r *http.Request) error {
+func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 	// Read Input
 	var userSigninRequest storage.UserSigninRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&userSigninRequest); err != nil {
-		return s.BadRequest()
+		a.BadRequest(w)
 	}
 
 	defer r.Body.Close()
 
 	// validate Request
-	if err := s.Validate.Struct(userSigninRequest); err != nil {
-		return s.BadRequest()
+	if err := a.Validate.Struct(userSigninRequest); err != nil {
+		a.BadRequest(w)
 	}
 
-	userID, err := s.DB.CheckUserExists(&userSigninRequest)
+	userID, err := a.DB.CheckUserExists(&userSigninRequest)
 	if err != nil {
 		if err == storage.ErrNoRecord {
-			return s.NotFound()
+			a.NotFound(w)
 		} else if err == storage.ErrInvalidCredentials {
-			return s.ClientError(http.StatusUnauthorized)
+			a.ClientError(w, http.StatusUnauthorized)
 		} else {
-			return s.ServerError(err)
+			a.ServerError(w, err)
 		}
 	}
 
 	// produce token
-	token, err := IssueUserJWT(userID.String(), "user", []byte(s.config.AccessToken))
+	token, err := IssueUserJWT(userID.String(), "user", []byte(a.Config.AccessToken))
 	if err != nil {
-		return s.ServerError(err)
+		a.ServerError(w, err)
 	}
 
 	// send token
@@ -101,6 +100,4 @@ func (s *APIServer) HandleSignIn(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	WriteJSON(w, http.StatusCreated, Response)
-
-	return nil
 }

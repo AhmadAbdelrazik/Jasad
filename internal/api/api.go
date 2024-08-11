@@ -12,53 +12,30 @@ import (
 	"github.com/justinas/alice"
 )
 
-// handler signature
-type apiFunc func(w http.ResponseWriter, r *http.Request) error
-
-type apiErr struct {
-	Message string `json:"error"`
-	Status  int    `json:"status"`
-}
-
-type apiResponse struct {
-	Message string `json:"message"`
-}
-
-func (r *apiErr) Error() string {
-	return r.Message
-}
-
-// Error handling here
-func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		err := f(w, r)
-		switch i := err.(type) {
-		case *apiErr:
-			WriteJSON(w, i.Status, i)
-		}
-	}
-}
-
 func WriteJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
 }
 
-type APIServer struct {
-	config   *config.Configuration
+type APIResponse struct {
+	Message string `json:"message"`
+}
+
+type Application struct {
+	Config   *config.Configuration
 	InfoLog  log.Logger
 	ErrorLog log.Logger
 	DB       storage.Storage
 	Validate *validator.Validate
 }
 
-func NewAPIServer(
+func NewApplication(
 	config *config.Configuration,
 	DB storage.Storage,
-	validate *validator.Validate) *APIServer {
-	return &APIServer{
-		config:   config,
+	validate *validator.Validate) *Application {
+	return &Application{
+		Config:   config,
 		InfoLog:  *log.New(os.Stdout, "INFO\t", log.Ltime|log.Ldate),
 		ErrorLog: *log.New(os.Stdout, "ERROR\t", log.Ltime|log.Ldate|log.Lshortfile),
 		DB:       DB,
@@ -66,24 +43,20 @@ func NewAPIServer(
 	}
 }
 
-func (s *APIServer) Run() {
+func (s *Application) Run() {
 	mux := http.NewServeMux()
 
 	log := alice.New(s.Logger)
 
-	mux.HandleFunc("POST /signup", makeHTTPHandleFunc(s.HandleSignup))
-	mux.HandleFunc("POST /signin", makeHTTPHandleFunc(s.HandleSignIn))
+	mux.HandleFunc("POST /signup", s.HandleSignup)
+	mux.HandleFunc("POST /signin", s.HandleSignIn)
+	mux.HandleFunc("POST /exercises", s.HandleCreateExercise)
+	mux.HandleFunc("GET /exercises", s.HandleGetExercises)
+	mux.HandleFunc("GET /exercises/muscle/{muscleGroup}/{muscleName}", s.HandleGetExercisesByMuscle)
+	mux.HandleFunc("GET /exercises/id/{id}", s.HandleGetExerciseByID)
+	mux.HandleFunc("GET /exercises/name/{name}", s.HandleGetExerciseByName)
+	mux.HandleFunc("PUT /exercises", s.HandleUpdateExercise)
+	mux.HandleFunc("DELETE /exercises/{id}", s.HandleDeleteExercise)
 
-	mux.HandleFunc("POST /exercises", makeHTTPHandleFunc(s.HandleCreateExercise))
-
-	mux.HandleFunc("GET /exercises", makeHTTPHandleFunc(s.HandleGetExercises))
-	mux.HandleFunc("GET /exercises/muscle/{muscleGroup}/{muscleName}", makeHTTPHandleFunc(s.HandleGetExercisesByMuscle))
-	mux.HandleFunc("GET /exercises/id/{id}", makeHTTPHandleFunc(s.HandleGetExerciseByID))
-	mux.HandleFunc("GET /exercises/name/{name}", makeHTTPHandleFunc(s.HandleGetExerciseByName))
-
-	mux.HandleFunc("PUT /exercises", makeHTTPHandleFunc(s.HandleUpdateExercise))
-
-	mux.HandleFunc("DELETE /exercises/{id}", makeHTTPHandleFunc(s.HandleDeleteExercise))
-
-	http.ListenAndServe(s.config.Port, log.Then(mux))
+	http.ListenAndServe(s.Config.Port, log.Then(mux))
 }
