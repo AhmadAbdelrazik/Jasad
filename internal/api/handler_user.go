@@ -41,7 +41,7 @@ func (a *Application) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// produce token
-	token, err := IssueUserJWT(userID.String(), "user", []byte(a.Config.AccessToken))
+	token, err := IssueUserJWT(userID, userRequest.UserName, "user", []byte(a.Config.AccessToken))
 	if err != nil {
 		a.ServerError(w, err)
 		return
@@ -91,7 +91,7 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// produce token
-	token, err := IssueUserJWT(userID.String(), "user", []byte(a.Config.AccessToken))
+	token, err := IssueUserJWT(userID, userSigninRequest.UserName, "user", []byte(a.Config.AccessToken))
 	if err != nil {
 		a.ServerError(w, err)
 		return
@@ -107,5 +107,23 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 		Token:   token,
 	}
 
-	WriteJSON(w, http.StatusCreated, Response)
+	WriteJSON(w, http.StatusAccepted, Response)
+}
+
+func (a *Application) HandleUserInfo(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	claims := ctx.Value("jwt").(*UserClaims)
+
+	user, err := a.DB.GetUserByID(claims.Subject)
+	if err != nil {
+		if err == storage.ErrNoRecord {
+			a.NotFound(w)
+		} else {
+			a.ServerError(w, err)
+		}
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, user)
 }

@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/google/uuid"
 )
 
 var ErrNoRecord = errors.New("no records found")
@@ -26,8 +25,9 @@ type Storage interface {
 	// Helpers
 	MuscleExists(*Muscle) error
 
-	CreateUser(*UserCreateRequest) (uuid.UUID, error)
-	CheckUserExists(user *UserSigninRequest) (uuid.UUID, error)
+	CreateUser(*UserCreateRequest) (string, error)
+	CheckUserExists(user *UserSigninRequest) (string, error)
+	GetUserByID(userID string) (*UserJWT, error)
 }
 
 type MySQL struct {

@@ -8,15 +8,15 @@ import (
 	"github.com/google/uuid"
 )
 
-func (st *MySQL) CreateUser(user *UserCreateRequest) (uuid.UUID, error) {
+func (st *MySQL) CreateUser(user *UserCreateRequest) (string, error) {
 	tx, err := st.DB.Begin()
 	if err != nil {
-		return uuid.Nil, err
+		return "", err
 	}
 
 	hash, err := HashUserPasswords(user.Password, user.UserName)
 	if err != nil {
-		return uuid.Nil, err
+		return "", err
 	}
 
 	userID := uuid.New()
@@ -25,50 +25,50 @@ func (st *MySQL) CreateUser(user *UserCreateRequest) (uuid.UUID, error) {
 	_, err = tx.Exec(stmt, userID.String(), user.UserName, hash, "user", time.Now())
 	if err != nil {
 		tx.Rollback()
-		return uuid.Nil, err
+		return "", err
 	}
 
 	if err := tx.Commit(); err != nil {
-		return uuid.Nil, err
+		return "", err
 	}
 
-	return userID, nil
+	return userID.String(), nil
 }
 
-func (st *MySQL) CheckUserExists(user *UserSigninRequest) (uuid.UUID, error) {
+func (st *MySQL) CheckUserExists(user *UserSigninRequest) (string, error) {
 	tx, err := st.DB.Begin()
 	if err != nil {
-		return uuid.Nil, err
+		return "", err
 	}
 
 	stmt := `SELECT user_id, password FROM users WHERE username = ?`
 
 	row := tx.QueryRow(stmt, user.UserName)
 
-	var userID uuid.UUID
+	var userID string
 	var hash string
 
 	if err := row.Scan(&userID, &hash); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return uuid.Nil, ErrNoRecord
+			return "", ErrNoRecord
 		} else {
-			return uuid.Nil, err
+			return "", err
 		}
 	}
 
 	check, err := CompareProvidedPassword(user.Password, user.UserName, hash)
 	if err != nil {
-		return uuid.Nil, err
+		return "", err
 	}
 
 	if check {
 		return userID, nil
 	} else {
-		return uuid.Nil, ErrInvalidCredentials
+		return "", ErrInvalidCredentials
 	}
 }
 
-func (st *MySQL) GetUserByID(userID uuid.UUID) (*UserJWT, error) {
+func (st *MySQL) GetUserByID(userID string) (*UserJWT, error) {
 	tx, err := st.DB.Begin()
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func (st *MySQL) GetUserByID(userID uuid.UUID) (*UserJWT, error) {
 	row := tx.QueryRow(stmt, userID)
 
 	user := &UserJWT{
-		UserID: userID.String(),
+		UserID: userID,
 	}
 
 	if err := row.Scan(&user.UserName, &user.Role); err != nil {

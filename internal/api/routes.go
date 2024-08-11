@@ -14,7 +14,7 @@ func (s *Application) Run() {
 	// Users
 	mux.HandleFunc("POST /signup", s.HandleSignup)
 	mux.HandleFunc("POST /signin", s.HandleSignIn)
-	mux.Handle("GET /user/{user}", alice.New(s.Authenticate).Then(http.HandlerFunc(s.HandleUserDetail)))
+	mux.Handle("GET /user/{user}", alice.New(s.Authenticate).Then(http.HandlerFunc(s.HandleUserInfo)))
 
 	// Exercises
 	mux.HandleFunc("POST /exercises", s.HandleCreateExercise)

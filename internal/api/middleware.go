@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"strings"
 )
@@ -12,7 +13,6 @@ func (a *Application) Logger(next http.Handler) http.Handler {
 	})
 }
 
-// Authenticate just verifies the token, no more, no less. it also checks if it has expired.
 func (a *Application) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authorizationHeader := r.Header.Get("Authorization")
@@ -20,8 +20,23 @@ func (a *Application) Authenticate(next http.Handler) http.Handler {
 
 		if authorizationHeader == tokenString {
 			a.BadRequest(w)
+			return
 		}
 
-		next.ServeHTTP(w, r)
+		claims, err := VerifyJWT(tokenString, []byte(a.Config.AccessToken))
+		if err != nil {
+			a.ClientError(w, http.StatusUnauthorized)
+			return
+		}
+
+		targetUser := r.PathValue("user")
+
+		if claims.Username != targetUser {
+			a.ClientError(w, http.StatusUnauthorized)
+			return
+		}
+		ctx := context.WithValue(r.Context(), "jwt", claims)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
