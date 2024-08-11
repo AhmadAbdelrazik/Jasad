@@ -53,7 +53,10 @@ type APIServer struct {
 	Validate *validator.Validate
 }
 
-func NewAPIServer(config *config.Configuration, DB storage.Storage, validate *validator.Validate) *APIServer {
+func NewAPIServer(
+	config *config.Configuration,
+	DB storage.Storage,
+	validate *validator.Validate) *APIServer {
 	return &APIServer{
 		config:   config,
 		InfoLog:  *log.New(os.Stdout, "INFO\t", log.Ltime|log.Ldate),
@@ -66,7 +69,7 @@ func NewAPIServer(config *config.Configuration, DB storage.Storage, validate *va
 func (s *APIServer) Run() {
 	mux := http.NewServeMux()
 
-	log := alice.New(s.logger)
+	log := alice.New(s.Logger)
 
 	mux.HandleFunc("POST /signup", makeHTTPHandleFunc(s.HandleSignup))
 	mux.HandleFunc("POST /signin", makeHTTPHandleFunc(s.HandleSignIn))

@@ -10,11 +10,6 @@ type UserClaims struct {
 	jwt.RegisteredClaims
 }
 
-// For Security Reasons, you should NEVER hard code
-// sensitive information like JWT key and instead store it
-// in environment variables and call it using os.Getenv("key-name")
-var key = []byte("69zDfhhZUxnNl63VqmV3EQWja9++RsqORbltMyeTMVHm")
-
 func SignJWT(claims *UserClaims, secret []byte) (string, error) {
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
