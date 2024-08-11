@@ -13,11 +13,13 @@ func (a *Application) HandleCreateExercise(w http.ResponseWriter, r *http.Reques
 	ExerciseRequest := storage.ExerciseCreateRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&ExerciseRequest); err != nil {
 		a.BadRequest(w)
+		return
 	}
 	r.Body.Close()
 
 	if err := a.Validate.Struct(ExerciseRequest); err != nil {
 		a.BadRequest(w)
+		return
 	}
 
 	if err := a.DB.CreateExercise(&ExerciseRequest); err != nil {
@@ -28,6 +30,7 @@ func (a *Application) HandleCreateExercise(w http.ResponseWriter, r *http.Reques
 		} else {
 			a.ServerError(w, err)
 		}
+		return
 	}
 
 	WriteJSON(w, http.StatusAccepted, APIResponse{Message: `exercise has been created`})
@@ -39,6 +42,7 @@ func (a *Application) HandleGetExercises(w http.ResponseWriter, r *http.Request)
 	exercises, err := a.DB.GetExercises()
 	if err != nil {
 		a.ServerError(w, err)
+		return
 	}
 
 	WriteJSON(w, http.StatusOK, exercises)
@@ -53,6 +57,7 @@ func (a *Application) HandleGetExercisesByMuscle(w http.ResponseWriter, r *http.
 
 	if err := a.DB.MuscleExists(&muscle); err != nil {
 		a.BadRequest(w)
+		return
 	}
 
 	exercises, err := a.DB.GetExercisesByMuscle(muscle)
@@ -62,6 +67,7 @@ func (a *Application) HandleGetExercisesByMuscle(w http.ResponseWriter, r *http.
 		} else {
 			a.ServerError(w, err)
 		}
+		return
 	}
 
 	WriteJSON(w, http.StatusOK, exercises)
@@ -74,6 +80,7 @@ func (a *Application) HandleGetExerciseByID(w http.ResponseWriter, r *http.Reque
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		a.BadRequest(w)
+		return
 	}
 
 	exercise, err := a.DB.GetExerciseByID(id)
@@ -83,6 +90,7 @@ func (a *Application) HandleGetExerciseByID(w http.ResponseWriter, r *http.Reque
 		} else {
 			a.ServerError(w, err)
 		}
+		return
 	}
 
 	WriteJSON(w, http.StatusOK, exercise)
@@ -101,6 +109,7 @@ func (a *Application) HandleGetExerciseByName(w http.ResponseWriter, r *http.Req
 		} else {
 			a.ServerError(w, err)
 		}
+		return
 	}
 
 	WriteJSON(w, http.StatusOK, exercise)
@@ -112,6 +121,7 @@ func (a *Application) HandleUpdateExercise(w http.ResponseWriter, r *http.Reques
 
 	if err := json.NewDecoder(r.Body).Decode(&exercise); err != nil {
 		a.BadRequest(w)
+		return
 	}
 	r.Body.Close()
 
@@ -125,6 +135,7 @@ func (a *Application) HandleUpdateExercise(w http.ResponseWriter, r *http.Reques
 		} else {
 			a.ServerError(w, err)
 		}
+		return
 	}
 
 	WriteJSON(w, http.StatusAccepted, APIResponse{Message: `exercise has been updated`})
@@ -137,6 +148,7 @@ func (a *Application) HandleDeleteExercise(w http.ResponseWriter, r *http.Reques
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		a.BadRequest(w)
+		return
 	}
 
 	if err := a.DB.DeleteExercise(id); err != nil {
@@ -145,6 +157,7 @@ func (a *Application) HandleDeleteExercise(w http.ResponseWriter, r *http.Reques
 		} else {
 			a.ServerError(w, err)
 		}
+		return
 	}
 
 	WriteJSON(w, http.StatusAccepted, APIResponse{Message: `exercise has been deleted`})

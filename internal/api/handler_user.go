@@ -15,6 +15,7 @@ func (a *Application) HandleSignup(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&userRequest); err != nil {
 		a.BadRequest(w)
+		return
 	}
 
 	defer r.Body.Close()
@@ -22,6 +23,7 @@ func (a *Application) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	// Validate Struct
 	if err := a.Validate.Struct(userRequest); err != nil {
 		a.BadRequest(w)
+		return
 	}
 
 	// Add user to database
@@ -35,12 +37,14 @@ func (a *Application) HandleSignup(w http.ResponseWriter, r *http.Request) {
 		} else {
 			a.ServerError(w, err)
 		}
+		return
 	}
 
 	// produce token
 	token, err := IssueUserJWT(userID.String(), "user", []byte(a.Config.AccessToken))
 	if err != nil {
 		a.ServerError(w, err)
+		return
 	}
 
 	// send token
@@ -63,6 +67,7 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&userSigninRequest); err != nil {
 		a.BadRequest(w)
+		return
 	}
 
 	defer r.Body.Close()
@@ -70,6 +75,7 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 	// validate Request
 	if err := a.Validate.Struct(userSigninRequest); err != nil {
 		a.BadRequest(w)
+		return
 	}
 
 	userID, err := a.DB.CheckUserExists(&userSigninRequest)
@@ -81,12 +87,14 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 		} else {
 			a.ServerError(w, err)
 		}
+		return
 	}
 
 	// produce token
 	token, err := IssueUserJWT(userID.String(), "user", []byte(a.Config.AccessToken))
 	if err != nil {
 		a.ServerError(w, err)
+		return
 	}
 
 	// send token
