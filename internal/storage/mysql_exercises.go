@@ -16,7 +16,7 @@ func (st *MySQL) CreateExercise(ExerciseRequest *ExerciseCreateRequest) error {
 
 	for _, muscle := range ExerciseRequest.Muscles {
 		if err := st.MuscleExists(&muscle); err != nil {
-			return err
+			return ErrInvalidMuscle
 		}
 	}
 
@@ -276,7 +276,7 @@ func (st *MySQL) GetExerciseByID(ID int) (*Exercise, error) {
 func (st *MySQL) UpdateExercise(Exercise *ExerciseUpdateRequest) error {
 	for _, muscle := range Exercise.Muscles {
 		if err := st.MuscleExists(&muscle); err != nil {
-			return err
+			return ErrInvalidMuscle
 		}
 	}
 

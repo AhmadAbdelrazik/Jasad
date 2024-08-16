@@ -10,6 +10,7 @@ import (
 var ErrNoRecord = errors.New("no records found")
 var ErrInvalidCredentials = errors.New("invalid credentials")
 var ErrDuplicateEntry = errors.New("duplicate entry")
+var ErrInvalidMuscle = errors.New("invalid muscle")
 
 type Storage struct {
 	User     IUserStorage

@@ -130,9 +130,12 @@ func (a *Application) HandleUpdateExercise(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := a.DB.Exercise.UpdateExercise(&exercise); err != nil {
-		if err == storage.ErrNoRecord {
+		switch err {
+		case storage.ErrInvalidMuscle:
+			a.BadRequest(w)
+		case storage.ErrNoRecord:
 			a.NotFound(w)
-		} else {
+		default:
 			a.ServerError(w, err)
 		}
 		return

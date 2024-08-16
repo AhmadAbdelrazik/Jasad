@@ -26,5 +26,8 @@ func main() {
 
 	server := api.NewApplication(config, db, validate)
 	server.InfoLog.Println(fmt.Sprint("Started listening at port ", config.Port))
-	server.Run()
+	err = server.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
 }

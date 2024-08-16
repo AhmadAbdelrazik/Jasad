@@ -20,7 +20,7 @@ func (st *MySQL) MuscleExists(muscle *Muscle) error {
 	if err := row.Scan(&m.MuscleName, &m.MuscleGroup); err != nil {
 		tx.Rollback()
 		if errors.Is(err, sql.ErrNoRows) {
-			return ErrNoRecord
+			return ErrInvalidMuscle
 		} else {
 			return err
 		}
