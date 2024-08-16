@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/AhmadAbdelrazik/jasad/internal/storage"
 )
 
 func (a *Application) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	// Read Input.
-	userRequest := storage.UserCreateRequest{}
+	var userRequest storage.UserRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&userRequest); err != nil {
 		a.BadRequest(w)
@@ -27,21 +26,22 @@ func (a *Application) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add user to database
-	userID, err := a.DB.CreateUser(&userRequest)
+	userJWT, err := a.DB.User.CreateUser(&userRequest)
 
 	if err != nil {
-		if err == storage.ErrNoRecord {
+		switch err {
+		case storage.ErrNoRecord:
 			a.BadRequest(w)
-		} else if strings.Contains(err.Error(), "Duplicate entry") {
+		case storage.ErrDuplicateEntry:
 			a.ClientError(w, http.StatusConflict)
-		} else {
+		default:
 			a.ServerError(w, err)
 		}
 		return
 	}
 
 	// produce token
-	token, err := IssueUserJWT(userID, userRequest.UserName, "user", []byte(a.Config.AccessToken))
+	token, err := IssueUserJWT(*userJWT, a.Config.AccessToken)
 	if err != nil {
 		a.ServerError(w, err)
 		return
@@ -63,9 +63,9 @@ func (a *Application) HandleSignup(w http.ResponseWriter, r *http.Request) {
 
 func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 	// Read Input
-	var userSigninRequest storage.UserSigninRequest
+	var userRequest storage.UserRequest
 
-	if err := json.NewDecoder(r.Body).Decode(&userSigninRequest); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&userRequest); err != nil {
 		a.BadRequest(w)
 		return
 	}
@@ -73,16 +73,14 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// validate Request
-	if err := a.Validate.Struct(userSigninRequest); err != nil {
+	if err := a.Validate.Struct(userRequest); err != nil {
 		a.BadRequest(w)
 		return
 	}
 
-	userID, err := a.DB.CheckUserExists(&userSigninRequest)
+	userJWT, err := a.DB.User.CheckUserExists(&userRequest)
 	if err != nil {
-		if err == storage.ErrNoRecord {
-			a.NotFound(w)
-		} else if err == storage.ErrInvalidCredentials {
+		if err == storage.ErrInvalidCredentials {
 			a.ClientError(w, http.StatusUnauthorized)
 		} else {
 			a.ServerError(w, err)
@@ -91,7 +89,7 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// produce token
-	token, err := IssueUserJWT(userID, userSigninRequest.UserName, "user", []byte(a.Config.AccessToken))
+	token, err := IssueUserJWT(*userJWT, a.Config.AccessToken)
 	if err != nil {
 		a.ServerError(w, err)
 		return
@@ -103,7 +101,7 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 		Message string `json:"message"`
 		Token   string `json:"token"`
 	}{
-		Message: fmt.Sprint("Hello ", userSigninRequest.UserName),
+		Message: fmt.Sprint("Hello ", userRequest.UserName),
 		Token:   token,
 	}
 
@@ -111,11 +109,7 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Application) HandleUserInfo(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	claims := ctx.Value("jwt").(*UserClaims)
-
-	user, err := a.DB.GetUserByID(claims.Subject)
+	user, err := a.DB.User.GetUser(0)
 	if err != nil {
 		if err == storage.ErrNoRecord {
 			a.NotFound(w)

@@ -25,13 +25,13 @@ type Application struct {
 	Config   *config.Configuration
 	InfoLog  log.Logger
 	ErrorLog log.Logger
-	DB       storage.Storage
+	DB       *storage.Storage
 	Validate *validator.Validate
 }
 
 func NewApplication(
 	config *config.Configuration,
-	DB storage.Storage,
+	DB *storage.Storage,
 	validate *validator.Validate) *Application {
 	return &Application{
 		Config:   config,

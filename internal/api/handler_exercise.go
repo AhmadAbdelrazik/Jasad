@@ -22,7 +22,7 @@ func (a *Application) HandleCreateExercise(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := a.DB.CreateExercise(&ExerciseRequest); err != nil {
+	if err := a.DB.Exercise.CreateExercise(&ExerciseRequest); err != nil {
 		if err == storage.ErrNoRecord {
 			a.BadRequest(w)
 		} else if strings.Contains(err.Error(), "Duplicate entry") {
@@ -39,7 +39,7 @@ func (a *Application) HandleCreateExercise(w http.ResponseWriter, r *http.Reques
 
 func (a *Application) HandleGetExercises(w http.ResponseWriter, r *http.Request) {
 
-	exercises, err := a.DB.GetExercises()
+	exercises, err := a.DB.Exercise.GetExercises()
 	if err != nil {
 		a.ServerError(w, err)
 		return
@@ -55,12 +55,12 @@ func (a *Application) HandleGetExercisesByMuscle(w http.ResponseWriter, r *http.
 	muscle.MuscleGroup = r.PathValue("muscleGroup")
 	muscle.MuscleName = r.PathValue("muscleName")
 
-	if err := a.DB.MuscleExists(&muscle); err != nil {
+	if err := a.DB.Exercise.MuscleExists(&muscle); err != nil {
 		a.BadRequest(w)
 		return
 	}
 
-	exercises, err := a.DB.GetExercisesByMuscle(muscle)
+	exercises, err := a.DB.Exercise.GetExercisesByMuscle(muscle)
 	if err != nil {
 		if err == storage.ErrNoRecord {
 			a.NotFound(w)
@@ -83,7 +83,7 @@ func (a *Application) HandleGetExerciseByID(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	exercise, err := a.DB.GetExerciseByID(id)
+	exercise, err := a.DB.Exercise.GetExerciseByID(id)
 	if err != nil {
 		if err == storage.ErrNoRecord {
 			a.NotFound(w)
@@ -102,7 +102,7 @@ func (a *Application) HandleGetExerciseByName(w http.ResponseWriter, r *http.Req
 
 	name = strings.ReplaceAll(name, "-", " ")
 
-	exercise, err := a.DB.GetExerciseByName(name)
+	exercise, err := a.DB.Exercise.GetExerciseByName(name)
 	if err != nil {
 		if err == storage.ErrNoRecord {
 			a.NotFound(w)
@@ -129,7 +129,7 @@ func (a *Application) HandleUpdateExercise(w http.ResponseWriter, r *http.Reques
 		a.BadRequest(w)
 	}
 
-	if err := a.DB.UpdateExercise(&exercise); err != nil {
+	if err := a.DB.Exercise.UpdateExercise(&exercise); err != nil {
 		if err == storage.ErrNoRecord {
 			a.NotFound(w)
 		} else {
@@ -151,7 +151,7 @@ func (a *Application) HandleDeleteExercise(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := a.DB.DeleteExercise(id); err != nil {
+	if err := a.DB.Exercise.DeleteExercise(id); err != nil {
 		if err == storage.ErrNoRecord {
 			a.NotFound(w)
 		} else {

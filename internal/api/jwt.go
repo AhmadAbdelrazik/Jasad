@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/AhmadAbdelrazik/jasad/internal/storage"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type UserClaims struct {
-	Username string `json:"username"`
+	Role string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -18,23 +19,23 @@ func SignJWT(claims *UserClaims, secret []byte) (string, error) {
 	return t.SignedString(secret)
 }
 
-func IssueUserJWT(userID, userName, role string, secret []byte) (string, error) {
+func IssueUserJWT(user storage.UserJWT, secret string) (string, error) {
 	claims := &UserClaims{
-		Username: userName,
+		Role: user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   userID,
+			Subject:   user.UserName,
 			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute).UTC()),
 		},
 	}
 
 	fmt.Printf("claims: %v\n", claims)
-	return SignJWT(claims, secret)
+	return SignJWT(claims, []byte(secret))
 }
 
-func VerifyJWT(tokenString string, secret []byte) (*UserClaims, error) {
+func VerifyJWT(tokenString string, secret string) (*UserClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(t *jwt.Token) (interface{}, error) {
-		return secret, nil
+		return []byte(secret), nil
 	})
 
 	if err != nil {

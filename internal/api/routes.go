@@ -10,11 +10,12 @@ func (s *Application) Run() {
 	mux := http.NewServeMux()
 
 	log := alice.New(s.Logger)
+	userInfoAuth := alice.New(s.Authenticate, s.AuthorizeUserInfo)
 
 	// Users
 	mux.HandleFunc("POST /signup", s.HandleSignup)
 	mux.HandleFunc("POST /signin", s.HandleSignIn)
-	mux.Handle("GET /user/{user}", alice.New(s.Authenticate).Then(http.HandlerFunc(s.HandleUserInfo)))
+	mux.Handle("GET /user/{user}", userInfoAuth.Then(http.HandlerFunc(s.HandleUserInfo)))
 
 	// Exercises
 	mux.HandleFunc("POST /exercises", s.HandleCreateExercise)

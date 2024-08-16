@@ -33,18 +33,13 @@ type ExerciseCreateRequest struct {
 // This struct shall not be used by any endpoint as a response
 type User struct {
 	UserName  string    `json:"username"`
-	UserID    string    `json:"userID"`
+	UserID    int       `json:"userID"`
 	Password  string    `json:"password"`
 	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 
-type UserCreateRequest struct {
-	UserName string `json:"username" validate:"required,min=8,max=32"`
-	Password string `json:"password" validate:"required,min=8,max=32"`
-}
-
-type UserSigninRequest struct {
+type UserRequest struct {
 	UserName string `json:"username" validate:"required,min=8,max=32"`
 	Password string `json:"password" validate:"required,min=8,max=32"`
 }
@@ -52,5 +47,4 @@ type UserSigninRequest struct {
 type UserJWT struct {
 	UserName string `json:"username"`
 	Role     string `json:"role"`
-	UserID   string `json:"userID"`
 }
