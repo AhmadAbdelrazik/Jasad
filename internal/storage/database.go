@@ -40,11 +40,43 @@ type IUserStorage interface {
 }
 
 type IExerciseStorage interface {
+	// CreateExercise Add a new Exercise to the database.
+	//
+	// returns ErrInvalidMuscle if there was any invalid
+	// muscles in the ExerciseCreateRequest. returns
+	// server error on other failure cases, return nil at
+	// success
 	CreateExercise(*ExerciseCreateRequest) error
 
+	// GetExercises Get all exercises in the database.
+	//
+	// Returns ErrNoRecord if the database is empty.
+	// returns server error on other failure cases,
+	// returns array of exercises.
 	GetExercises() ([]Exercise, error)
+
+	// GetExercisesByMuscle Returns all Exercises that
+	// Contains Muscle in them.
+	//
+	// Returns ErrNoRecord if there is no muscles
+	// returns server error on other failure cases,
+	// returns array of exercises.
 	GetExercisesByMuscle(Muscle) ([]Exercise, error)
+
+	// GetExerciseByID Returns the Exercise with the
+	// specific id.
+	//
+	// Returns ErrNoRecord if exercise with id does
+	// not exist. returns server error on other failure
+	// cases, returns the exercise.
 	GetExerciseByID(int) (*Exercise, error)
+
+	// GetExerciseByName Returns the Exercise with
+	// the specific name.
+	//
+	// Returns ErrNoRecord if exercise with name does
+	// not exist. returns server error on other failure
+	// cases, returns the exercise.
 	GetExerciseByName(string) (*Exercise, error)
 
 	UpdateExercise(*ExerciseUpdateRequest) error
