@@ -29,6 +29,15 @@ func (s *Application) Run() error {
 
 	mux.HandleFunc("DELETE /exercises/{id}", s.HandleDeleteExercise)
 
+	// Workout Sessions
+
+	// mux.HandleFunc("GET /user/{user}/workouts")
+	// mux.HandleFunc("GET /user/{user}/workouts/{workout}")
+	// mux.HandleFunc("GET /user/{user}/workouts/new")
+	// mux.HandleFunc("POST /user/{user}/workouts")
+	// mux.HandleFunc("PUT /user/{user}/workouts/{workout}")
+	// mux.HandleFunc("DELETE /user/{user}/workouts/{workout}")
+
 	err := http.ListenAndServe(s.Config.Port, standard.Then(mux))
 	return err
 }
