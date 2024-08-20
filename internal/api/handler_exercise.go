@@ -38,7 +38,6 @@ func (a *Application) HandleCreateExercise(w http.ResponseWriter, r *http.Reques
 }
 
 func (a *Application) HandleGetExercises(w http.ResponseWriter, r *http.Request) {
-
 	exercises, err := a.DB.Exercise.GetExercises()
 	if err != nil {
 		a.ServerError(w, err)
@@ -46,7 +45,6 @@ func (a *Application) HandleGetExercises(w http.ResponseWriter, r *http.Request)
 	}
 
 	WriteJSON(w, http.StatusOK, exercises)
-
 }
 
 func (a *Application) HandleGetExercisesByMuscle(w http.ResponseWriter, r *http.Request) {

@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 )
 
 // Creates an exercise and store it in the database
@@ -36,8 +37,19 @@ func (st *MySQL) CreateExercise(ExerciseRequest *ExerciseCreateRequest) error {
 
 	stmt = `INSERT INTO muscles_exercises(muscle_name, muscle_group, exercise_id) VALUES (?,?,?)`
 
-	for _, muscle := range ExerciseRequest.Muscles {
-		if _, err := tx.Exec(stmt, muscle.MuscleName, muscle.MuscleGroup, int(id)); err != nil {
+	ch := make(chan error, len(ExerciseRequest.Muscles))
+
+	for i, m := range ExerciseRequest.Muscles {
+		go func() {
+			if _, err := tx.Exec(stmt, m.MuscleName, m.MuscleGroup, int(id)); err != nil {
+				ch <- fmt.Errorf("error at index %d: %w", i, err)
+			}
+			ch <- nil
+		}()
+	}
+
+	for range ExerciseRequest.Muscles {
+		if err := <-ch; err != nil {
 			tx.Rollback()
 			return err
 		}

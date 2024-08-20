@@ -15,6 +15,7 @@ var ErrInvalidMuscle = errors.New("invalid muscle")
 type Storage struct {
 	User     IUserStorage
 	Exercise IExerciseStorage
+	Workout  IWorkoutStorage
 }
 
 type IUserStorage interface {
@@ -86,6 +87,25 @@ type IExerciseStorage interface {
 	MuscleExists(*Muscle) error
 }
 
+type IWorkoutStorage interface {
+	// CreateWorkout takes a WorkoutCreateRequest and userID to add
+	// a workout to the database. returns the sessionID at success,
+	// returns 0 and err at failure.
+	CreateWorkout(workout WorkoutCreateRequest, userID int) (int, error)
+
+	// GetWorkout takes a sessionID and userID, to get a specific
+	// workout. the userID is required to prevent Broken Object
+	// Level Authorization or BOLA. Function returns session in
+	// case of success, or returns a ErrNoRecord if no records are
+	// found. returns an err if there was other database related errors.
+	GetWorkout(sessionID, userID int) (*Session, error)
+
+	// GetWorkouts gets workout related to the userID, in case of
+	// failure, returns ErrNoRecord in case of no records, or err
+	// if there was a database error
+	GetWorkouts(userID int) ([]SessionResponse, error)
+}
+
 type MySQL struct {
 	DB *sql.DB
 }
@@ -106,6 +126,7 @@ func NewMySQLDatabase(dsn string) (*Storage, error) {
 	storage := &Storage{
 		User:     mysql,
 		Exercise: mysql,
+		Workout:  mysql,
 	}
 
 	return storage, nil

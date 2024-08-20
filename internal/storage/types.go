@@ -32,8 +32,8 @@ type ExerciseCreateRequest struct {
 
 // This struct shall not be used by any endpoint as a response
 type User struct {
-	UserID    int       `json:"userID"`
 	UserName  string    `json:"username"`
+	UserID    int       `json:"userID"`
 	Password  string    `json:"password"`
 	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"createdAt"`
@@ -62,4 +62,19 @@ type Session struct {
 	Workouts  []Workout `json:"workouts"`
 	Date      time.Time `json:"date"`
 	UserID    int       `json:"userID"`
+}
+
+type WorkoutCreateRequest struct {
+	Workouts []Workout `json:"workouts"`
+	Date     time.Time `json:"date"`
+}
+
+type SessionResponse struct {
+	SessionID int       `json:"sessionID"`
+	Date      time.Time `json:"date"`
+}
+
+type WorkoutGetResponse struct {
+	Username string            `json:"username"`
+	Sessions []SessionResponse `json:"sessions"`
 }
