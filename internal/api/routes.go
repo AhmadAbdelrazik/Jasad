@@ -30,13 +30,13 @@ func (a *Application) Run() error {
 	mux.HandleFunc("DELETE /exercises/{id}", a.HandleDeleteExercise)
 
 	// Workout Sessions
-	mux.Handle("GET /user/{user}/workouts", userAuth.ThenFunc(a.HandleGetWorkouts))
-	mux.Handle("GET /user/{user}/workouts/new", userAuth.ThenFunc(a.HandleCreateWorkoutForm))
-	mux.Handle("POST /user/{user}/workouts/new", userAuth.ThenFunc(a.HandleCreateWorkout))
+	mux.Handle("GET /users/{user}/workouts", userAuth.ThenFunc(a.HandleGetWorkouts))
+	mux.Handle("GET /users/{user}/workouts/new", userAuth.ThenFunc(a.HandleCreateWorkoutForm))
+	mux.Handle("POST /users/{user}/workouts/new", userAuth.ThenFunc(a.HandleCreateWorkout))
 
-	mux.Handle("GET /user/{user}/workouts/{workout}", userAuth.ThenFunc(a.HandleGetWorkout))
-	mux.Handle("PUT /user/{user}/workouts/{workout}", userAuth.ThenFunc(a.HandleUpdateWorkout))
-	mux.Handle("DELETE /user/{user}/workouts/{workout}", userAuth.ThenFunc(a.HandleDeleteWorkout))
+	mux.Handle("GET /users/{user}/workouts/{workout}", userAuth.ThenFunc(a.HandleGetWorkout))
+	mux.Handle("PUT /users/{user}/workouts/{workout}", userAuth.ThenFunc(a.HandleUpdateWorkout))
+	mux.Handle("DELETE /users/{user}/workouts/{workout}", userAuth.ThenFunc(a.HandleDeleteWorkout))
 
 	err := http.ListenAndServe(a.Config.Port, standard.Then(mux))
 	return err

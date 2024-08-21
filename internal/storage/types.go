@@ -51,7 +51,7 @@ type UserJWT struct {
 
 type Workout struct {
 	WorkoutID  int     `json:"workoutID"`
-	ExerciseID int     `json:"exerciseID "`
+	ExerciseID int     `json:"exerciseID"`
 	Reps       int     `json:"reps"`
 	Sets       int     `json:"sets"`
 	Weights    float32 `json:"weightst"`
@@ -65,8 +65,8 @@ type Session struct {
 }
 
 type WorkoutCreateRequest struct {
-	Workouts []Workout `json:"workouts"`
-	Date     time.Time `json:"date"`
+	Workouts []Workout `json:"workouts" validate:"required"`
+	Date     time.Time `json:"date" validate:"required"`
 }
 
 type SessionResponse struct {

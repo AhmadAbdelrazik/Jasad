@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/AhmadAbdelrazik/jasad/internal/storage"
@@ -29,7 +28,6 @@ func IssueUserJWT(user storage.UserJWT, secret string) (string, error) {
 		},
 	}
 
-	fmt.Printf("claims: %v\n", claims)
 	return SignJWT(claims, []byte(secret))
 }
 

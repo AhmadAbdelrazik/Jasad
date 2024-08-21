@@ -12,13 +12,15 @@ import (
 func (a *Application) HandleCreateWorkout(w http.ResponseWriter, r *http.Request) {
 	var workoutRequest storage.WorkoutCreateRequest
 
-	if err := json.NewDecoder(r.Body).Decode(workoutRequest); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&workoutRequest); err != nil {
 		a.BadRequest(w)
+		fmt.Printf("err: %v\n", err)
 		return
 	}
 
 	if err := a.Validate.Struct(workoutRequest); err != nil {
 		a.BadRequest(w)
+		fmt.Printf("err: %v\n", err)
 		return
 	}
 

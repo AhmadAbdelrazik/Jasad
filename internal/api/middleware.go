@@ -77,7 +77,7 @@ func (a *Application) AuthorizeUserInfo(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userTarget := r.PathValue("user")
 
-		userJWT := r.Context().Value("userJWT").(storage.UserJWT)
+		userJWT := r.Context().Value("userJWT").(*storage.UserJWT)
 
 		if userJWT.UserName != userTarget && userJWT.Role != "admin" {
 			a.ClientError(w, http.StatusUnauthorized)
