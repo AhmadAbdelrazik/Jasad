@@ -31,7 +31,6 @@ func (st *MySQL) CreateWorkout(workout WorkoutCreateRequest, userID int) (int, e
 
 	stmt = `INSERT INTO workouts(session_id, exercise_id, reps, sets, weights) VALUES (?, ?, ?, ?, ?)`
 	for i, w := range workout.Workouts {
-		fmt.Printf("w: %v\n", w)
 		go func() {
 			_, err := tx.Exec(stmt, sessionID, w.ExerciseID, w.Reps, w.Sets, w.Weights)
 			if err != nil {
@@ -46,6 +45,11 @@ func (st *MySQL) CreateWorkout(workout WorkoutCreateRequest, userID int) (int, e
 			tx.Rollback()
 			return 0, err
 		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return 0, err
 	}
 
 	return int(sessionID), nil

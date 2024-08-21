@@ -50,11 +50,11 @@ type UserJWT struct {
 }
 
 type Workout struct {
-	WorkoutID  int     `json:"workoutID"`
-	ExerciseID int     `json:"exerciseID"`
-	Reps       int     `json:"reps"`
-	Sets       int     `json:"sets"`
-	Weights    float32 `json:"weightst"`
+	WorkoutID  int     `json:"workoutID" validate:"required"`
+	ExerciseID int     `json:"exerciseID" validate:"required"`
+	Reps       int     `json:"reps" validate:"required"`
+	Sets       int     `json:"sets" validate:"required"`
+	Weights    float32 `json:"weights" validate:"required"`
 }
 
 type Session struct {

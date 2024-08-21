@@ -14,13 +14,11 @@ func (a *Application) HandleCreateWorkout(w http.ResponseWriter, r *http.Request
 
 	if err := json.NewDecoder(r.Body).Decode(&workoutRequest); err != nil {
 		a.BadRequest(w)
-		fmt.Printf("err: %v\n", err)
 		return
 	}
 
 	if err := a.Validate.Struct(workoutRequest); err != nil {
 		a.BadRequest(w)
-		fmt.Printf("err: %v\n", err)
 		return
 	}
 
@@ -31,7 +29,7 @@ func (a *Application) HandleCreateWorkout(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("GET /user/%d/workouts/%d", userID, sessionID), http.StatusPermanentRedirect)
+	http.Redirect(w, r, fmt.Sprintf("/users/%d/workouts/%d", userID, sessionID), http.StatusPermanentRedirect)
 }
 
 func (a *Application) HandleCreateWorkoutForm(w http.ResponseWriter, r *http.Request) {

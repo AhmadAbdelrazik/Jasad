@@ -80,6 +80,8 @@ func (a *Application) AuthorizeUserInfo(next http.Handler) http.Handler {
 		userJWT := r.Context().Value("userJWT").(*storage.UserJWT)
 
 		if userJWT.UserName != userTarget && userJWT.Role != "admin" {
+			fmt.Printf("userJWT.UserName: %v\n", userJWT.UserName)
+			fmt.Printf("userTarget: %v\n", userTarget)
 			a.ClientError(w, http.StatusUnauthorized)
 			return
 		}
