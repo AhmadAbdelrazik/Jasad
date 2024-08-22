@@ -10,7 +10,7 @@ import (
 )
 
 func (a *Application) HandleCreateWorkout(w http.ResponseWriter, r *http.Request) {
-	var workoutRequest storage.WorkoutCreateRequest
+	var workoutRequest storage.WorkoutRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&workoutRequest); err != nil {
 		a.BadRequest(w)
@@ -107,9 +107,57 @@ func (a *Application) HandleGetWorkouts(w http.ResponseWriter, r *http.Request) 
 }
 
 func (a *Application) HandleUpdateWorkout(w http.ResponseWriter, r *http.Request) {
+	var workoutRequest storage.WorkoutRequest
 
+	if err := json.NewDecoder(r.Body).Decode(&workoutRequest); err != nil {
+		a.BadRequest(w)
+		return
+	}
+
+	if err := a.Validate.Struct(workoutRequest); err != nil {
+		a.BadRequest(w)
+		return
+	}
+
+	userID := r.Context().Value("userID").(int)
+	sessionID, err := strconv.Atoi(r.PathValue("workout"))
+	if err != nil {
+		a.BadRequest(w)
+		return
+	}
+
+	if err := a.DB.Workout.UpdateWorkout(userID, sessionID, workoutRequest); err != nil {
+		if err == storage.ErrNoRecord {
+			a.NotFound(w)
+		}
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/users/%d/workouts/%d", userID, sessionID), http.StatusPermanentRedirect)
 }
 
 func (a *Application) HandleDeleteWorkout(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("userID").(int)
+	sessionID, err := strconv.Atoi(r.PathValue("workout"))
+	if err != nil {
+		a.BadRequest(w)
+		return
+	}
 
+	if err := a.DB.Workout.DeleteWorkout(userID, sessionID); err != nil {
+		if err == storage.ErrNoRecord {
+			a.NotFound(w)
+		} else {
+			a.ServerError(w, err)
+		}
+		return
+	}
+
+	response := struct {
+		Message string `json:"message"`
+	}{
+		Message: fmt.Sprintf("Workout session %d has been removed", sessionID),
+	}
+
+	WriteJSON(w, http.StatusAccepted, response)
 }

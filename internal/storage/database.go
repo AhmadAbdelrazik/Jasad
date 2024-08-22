@@ -91,7 +91,7 @@ type IWorkoutStorage interface {
 	// CreateWorkout takes a WorkoutCreateRequest and userID to add
 	// a workout to the database. returns the sessionID at success,
 	// returns 0 and err at failure.
-	CreateWorkout(workout WorkoutCreateRequest, userID int) (int, error)
+	CreateWorkout(workout WorkoutRequest, userID int) (int, error)
 
 	// GetWorkout takes a sessionID and userID, to get a specific
 	// workout. the userID is required to prevent Broken Object
@@ -104,6 +104,16 @@ type IWorkoutStorage interface {
 	// failure, returns ErrNoRecord in case of no records, or err
 	// if there was a database error
 	GetWorkouts(userID int) ([]SessionResponse, error)
+
+	// UpdateWorkout Updates the workouts with the specified userID
+	// and sessionID, returns ErrNoRecord if no session is found,
+	// and returns nil at success. otherwise returns a generic error.
+	UpdateWorkout(userID, sessionID int, workout WorkoutRequest) error
+
+	// DeleteWorkout Delete the workout session with the specified
+	// and sessionID, returns ErrNoRecord if no session is found,
+	// and returns nil at success. otherwise returns a generic error.
+	DeleteWorkout(userID, sessionID int) error
 }
 
 type MySQL struct {

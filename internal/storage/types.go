@@ -64,7 +64,7 @@ type Session struct {
 	UserID    int       `json:"userID"`
 }
 
-type WorkoutCreateRequest struct {
+type WorkoutRequest struct {
 	Workouts []Workout `json:"workouts" validate:"required"`
 	Date     time.Time `json:"date" validate:"required"`
 }

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (st *MySQL) CreateWorkout(workout WorkoutCreateRequest, userID int) (int, error) {
+func (st *MySQL) CreateWorkout(workout WorkoutRequest, userID int) (int, error) {
 	tx, err := st.DB.Begin()
 	if err != nil {
 		return 0, err
@@ -135,4 +135,96 @@ func (st *MySQL) GetWorkouts(userID int) ([]SessionResponse, error) {
 	}
 
 	return sessions, nil
+}
+
+func (st *MySQL) UpdateWorkout(userID, sessionID int, workout WorkoutRequest) error {
+	tx, err := st.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	stmt := `UPDATE sessions
+	SET date = ?
+	WHERE user_id = ? AND session_id = ?`
+
+	_, err = tx.Exec(stmt, workout.Date, userID, sessionID)
+	if err != nil {
+		tx.Rollback()
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNoRecord
+		}
+	}
+
+	stmt = `DELETE FROM workouts WHERE user_id = ? AND session_id = ?`
+
+	_, err = tx.Exec(stmt, userID, sessionID)
+
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	stmt = `INSERT INTO workouts(session_id, exercise_id, reps, sets, weights) VALUES(?, ?, ?, ?, ?)`
+
+	ch := make(chan error, len(workout.Workouts))
+
+	for i, w := range workout.Workouts {
+		go func() {
+			_, err := tx.Exec(stmt, sessionID, w.ExerciseID, w.Reps, w.Sets, w.Weights)
+			if err != nil {
+				ch <- fmt.Errorf("error at %d: %w", i, err)
+			} else {
+				ch <- nil
+			}
+		}()
+	}
+
+	for range workout.Workouts {
+		if err := <-ch; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return err
+	}
+	return nil
+}
+
+func (st *MySQL) DeleteWorkout(userID, sessionID int) error {
+	tx, err := st.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	stmt := `DELETE FROM sessions WHERE user_id = ? AND session_id = ?`
+
+	if res, err := tx.Exec(stmt, userID, sessionID); err != nil {
+		tx.Rollback()
+		return err
+	} else {
+		if val, err := res.LastInsertId(); err != nil {
+			tx.Rollback()
+			return err
+		} else if val == 0 {
+			tx.Rollback()
+			return ErrNoRecord
+		}
+	}
+
+	stmt = `DELETE FROM workouts WHERE session_id = ?`
+	_, err = tx.Exec(stmt, sessionID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return nil
 }
