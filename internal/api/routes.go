@@ -14,9 +14,9 @@ func (a *Application) Run() error {
 	adminAuth := alice.New(a.Authenticate, a.AuthorizeAdmin)
 
 	// Users
-	mux.HandleFunc("POST /signup", a.HandleSignup)
-	mux.HandleFunc("POST /signin", a.HandleSignIn)
-	mux.Handle("GET /user/{user}", userAuth.ThenFunc(a.HandleUserInfo))
+	mux.HandleFunc("POST /users/signup", a.HandleSignup)
+	mux.HandleFunc("POST /users/signin", a.HandleSignIn)
+	mux.Handle("GET /users/user/{user}", adminAuth.ThenFunc(a.HandleUserInfo))
 
 	// Exercises
 

@@ -37,7 +37,7 @@ type IUserStorage interface {
 
 	// GetUser Gets All information about the user. returns
 	// ErrNoRecord if user is not found, or error if server error.
-	GetUser(userID int) (*User, error)
+	GetUser(userID int) (*UserResponse, error)
 }
 
 type IExerciseStorage interface {

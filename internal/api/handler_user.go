@@ -109,7 +109,8 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Application) HandleUserInfo(w http.ResponseWriter, r *http.Request) {
-	user, err := a.DB.User.GetUser(0)
+	userID := r.Context().Value("userID").(int)
+	user, err := a.DB.User.GetUser(userID)
 	if err != nil {
 		if err == storage.ErrNoRecord {
 			a.NotFound(w)

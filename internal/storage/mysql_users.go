@@ -107,20 +107,20 @@ func (st *MySQL) GetUserID(username string) (int, error) {
 	return userId, nil
 }
 
-func (st *MySQL) GetUser(userID int) (*User, error) {
+func (st *MySQL) GetUser(userID int) (*UserResponse, error) {
 	tx, err := st.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
 
-	user := &User{
+	user := &UserResponse{
 		UserID: userID,
 	}
-	stmt := `SELECT user_name, password, role, created_at FROM users WHERE user_id = ?`
+	stmt := `SELECT user_name, role, created_at FROM users WHERE user_id = ?`
 
 	row := tx.QueryRow(stmt, userID)
 
-	if err := row.Scan(stmt, &user.UserName, &user.Password, &user.Role, &user.CreatedAt); err != nil {
+	if err := row.Scan(stmt, &user.UserName, &user.Role, &user.CreatedAt); err != nil {
 		return nil, err
 	}
 

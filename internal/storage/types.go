@@ -44,6 +44,13 @@ type UserRequest struct {
 	Password string `json:"password" validate:"required,min=8,max=32"`
 }
 
+type UserResponse struct {
+	UserName  string    `json:"username"`
+	UserID    int       `json:"userID"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
 type UserJWT struct {
 	UserName string `json:"username"`
 	Role     string `json:"role"`
