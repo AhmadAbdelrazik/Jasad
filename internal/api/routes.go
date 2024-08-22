@@ -11,6 +11,7 @@ func (a *Application) Run() error {
 
 	standard := alice.New(a.recoverPanic, secureHeaders, a.Logger)
 	userAuth := alice.New(a.Authenticate, a.AuthorizeUserInfo)
+	adminAuth := alice.New(a.Authenticate, a.AuthorizeAdmin)
 
 	// Users
 	mux.HandleFunc("POST /signup", a.HandleSignup)
@@ -18,16 +19,15 @@ func (a *Application) Run() error {
 	mux.Handle("GET /user/{user}", userAuth.ThenFunc(a.HandleUserInfo))
 
 	// Exercises
-	mux.HandleFunc("POST /exercises", a.HandleCreateExercise)
 
 	mux.HandleFunc("GET /exercises", a.HandleGetExercises)
 	mux.HandleFunc("GET /exercises/muscle/{muscleGroup}/{muscleName}", a.HandleGetExercisesByMuscle)
 	mux.HandleFunc("GET /exercises/id/{id}", a.HandleGetExerciseByID)
 	mux.HandleFunc("GET /exercises/name/{name}", a.HandleGetExerciseByName)
 
-	mux.HandleFunc("PUT /exercises", a.HandleUpdateExercise)
-
-	mux.HandleFunc("DELETE /exercises/{id}", a.HandleDeleteExercise)
+	mux.Handle("POST /exercises", adminAuth.ThenFunc(a.HandleCreateExercise))
+	mux.Handle("PUT /exercises", adminAuth.ThenFunc(a.HandleUpdateExercise))
+	mux.Handle("DELETE /exercises/{id}", adminAuth.ThenFunc(a.HandleDeleteExercise))
 
 	// Workout Sessions
 	mux.Handle("GET /users/{user}/workouts", userAuth.ThenFunc(a.HandleGetWorkouts))

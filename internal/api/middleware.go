@@ -102,3 +102,28 @@ func (a *Application) AuthorizeUserInfo(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
+func (a *Application) AuthorizeAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userJWT := r.Context().Value("userJWT").(*storage.UserJWT)
+
+		if userJWT.Role != "admin" {
+			a.ClientError(w, http.StatusUnauthorized)
+			return
+		}
+
+		userID, err := a.DB.User.GetUserID(userJWT.UserName)
+		if err != nil {
+			if err == storage.ErrNoRecord {
+				a.NotFound(w)
+			} else {
+				a.ServerError(w, err)
+			}
+
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), "userID", userID)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
