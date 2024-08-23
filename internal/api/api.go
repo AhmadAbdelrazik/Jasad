@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/AhmadAbdelrazik/jasad/internal/cache"
 	"github.com/AhmadAbdelrazik/jasad/internal/config"
 	"github.com/AhmadAbdelrazik/jasad/internal/storage"
 	"github.com/go-playground/validator/v10"
@@ -27,15 +28,18 @@ type Application struct {
 	ErrorLog log.Logger
 	DB       *storage.Storage
 	Validate *validator.Validate
+	Cache    cache.Cache
 }
 
 func NewApplication(
 	config *config.Configuration,
 	DB *storage.Storage,
+	cache cache.Cache,
 	validate *validator.Validate) *Application {
 	return &Application{
 		Config:   config,
 		DB:       DB,
+		Cache:    cache,
 		Validate: validate,
 		InfoLog:  *log.New(os.Stdout, "INFO\t", log.Ltime|log.Ldate),
 		ErrorLog: *log.New(os.Stdout, "ERROR\t", log.Ltime|log.Ldate|log.Lshortfile),

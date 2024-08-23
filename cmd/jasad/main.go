@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/AhmadAbdelrazik/jasad/internal/api"
+	"github.com/AhmadAbdelrazik/jasad/internal/cache"
 	"github.com/AhmadAbdelrazik/jasad/internal/config"
 	"github.com/AhmadAbdelrazik/jasad/internal/storage"
 	"github.com/go-playground/validator/v10"
@@ -24,7 +25,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server := api.NewApplication(config, db, validate)
+	cache := cache.NewRedis()
+
+	server := api.NewApplication(config, db, cache, validate)
 	server.InfoLog.Println(fmt.Sprint("Started listening at port ", config.Port))
 	err = server.Run()
 	if err != nil {
