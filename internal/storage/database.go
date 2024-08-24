@@ -8,7 +8,8 @@ import (
 )
 
 var ErrNoRecord = errors.New("no records found")
-var ErrInvalidCredentials = errors.New("invalid credentials")
+var ErrInvalidUsername = errors.New("invalid username")
+var ErrInvalidPassword = errors.New("invalid password")
 var ErrDuplicateEntry = errors.New("duplicate entry")
 var ErrInvalidMuscle = errors.New("invalid muscle")
 

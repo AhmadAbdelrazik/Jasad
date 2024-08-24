@@ -62,7 +62,7 @@ func (st *MySQL) CheckUserExists(user *UserRequest) (*UserJWT, error) {
 
 	if err := row.Scan(&hash, &role); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrInvalidCredentials
+			return nil, ErrInvalidUsername
 		} else {
 			return nil, err
 		}
@@ -74,7 +74,7 @@ func (st *MySQL) CheckUserExists(user *UserRequest) (*UserJWT, error) {
 	}
 
 	if !check {
-		return nil, ErrInvalidCredentials
+		return nil, ErrInvalidPassword
 	}
 
 	return &UserJWT{UserName: user.UserName, Role: role}, nil

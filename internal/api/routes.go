@@ -6,7 +6,7 @@ import (
 	"github.com/justinas/alice"
 )
 
-func (a *Application) Run() http.Handler {
+func (a *Application) Routes() http.Handler {
 	mux := http.NewServeMux()
 
 	standard := alice.New(a.recoverPanic, secureHeaders, a.Logger)
@@ -16,7 +16,7 @@ func (a *Application) Run() http.Handler {
 	// Users
 	mux.HandleFunc("POST /users/signup", a.HandleSignup)
 	mux.HandleFunc("POST /users/signin", a.HandleSignIn)
-	mux.Handle("GET /users/user/{user}", adminAuth.ThenFunc(a.HandleUserInfo))
+	mux.Handle("GET /users/{user}/info", adminAuth.ThenFunc(a.HandleUserInfo))
 
 	// Exercises
 

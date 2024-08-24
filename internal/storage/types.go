@@ -40,8 +40,8 @@ type User struct {
 }
 
 type UserRequest struct {
-	UserName string `json:"username" validate:"required,min=8,max=32"`
-	Password string `json:"password" validate:"required,min=8,max=32"`
+	UserName string `json:"username" validate:"required,min=8,max=32,alphanum"`
+	Password string `json:"password" validate:"required,min=8,max=32,alphanum"`
 }
 
 type UserResponse struct {

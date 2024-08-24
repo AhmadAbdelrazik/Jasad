@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
+	"github.com/AhmadAbdelrazik/jasad/internal/cache"
 	"github.com/AhmadAbdelrazik/jasad/internal/storage"
 )
 
@@ -78,9 +81,48 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check login attempts in cache
+	var loginAttempts int
+	attemptsRaw, err := a.Cache.Get(fmt.Sprintf("username: %s", userRequest.UserName))
+	if err != nil {
+		if err == cache.ErrNotExist {
+			attemptsRaw = "0"
+		} else {
+			a.ServerError(w, err)
+			return
+		}
+	}
+
+	loginAttempts, err = strconv.Atoi(attemptsRaw)
+	if err != nil {
+		a.ServerError(w, err)
+		return
+	}
+
+	fmt.Printf("loginAttempts: %v\n", loginAttempts)
+
+	if loginAttempts >= 5 {
+		a.ClientError(w, http.StatusTooManyRequests)
+		return
+	}
+
+	// Call for the Database
 	userJWT, err := a.DB.User.CheckUserExists(&userRequest)
 	if err != nil {
-		if err == storage.ErrInvalidCredentials {
+		if err == storage.ErrInvalidUsername {
+			a.ClientError(w, http.StatusUnauthorized)
+		} else if err == storage.ErrInvalidPassword {
+			// Register login attempt on the username.
+			// We don't register globally to protect the cache from filling the heap
+			// with invalid usernames, and only set our cache on actual usernames
+			if err := a.Cache.Set(
+				fmt.Sprintf("username: %s", userRequest.UserName),
+				fmt.Sprintf("%d", loginAttempts+1),
+				5*time.Minute); err != nil {
+				a.ServerError(w, err)
+				return
+			}
+
 			a.ClientError(w, http.StatusUnauthorized)
 		} else {
 			a.ServerError(w, err)
