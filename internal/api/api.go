@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/AhmadAbdelrazik/jasad/internal/cache"
 	"github.com/AhmadAbdelrazik/jasad/internal/config"
@@ -24,24 +23,9 @@ type APIResponse struct {
 
 type Application struct {
 	Config   *config.Configuration
-	InfoLog  log.Logger
-	ErrorLog log.Logger
+	InfoLog  *log.Logger
+	ErrorLog *log.Logger
 	DB       *storage.Storage
 	Validate *validator.Validate
 	Cache    cache.Cache
-}
-
-func NewApplication(
-	config *config.Configuration,
-	DB *storage.Storage,
-	cache cache.Cache,
-	validate *validator.Validate) *Application {
-	return &Application{
-		Config:   config,
-		DB:       DB,
-		Cache:    cache,
-		Validate: validate,
-		InfoLog:  *log.New(os.Stdout, "INFO\t", log.Ltime|log.Ldate),
-		ErrorLog: *log.New(os.Stdout, "ERROR\t", log.Ltime|log.Ldate|log.Lshortfile),
-	}
 }

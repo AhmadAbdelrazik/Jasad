@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
+	"os"
+	"time"
 
 	"github.com/AhmadAbdelrazik/jasad/internal/api"
 	"github.com/AhmadAbdelrazik/jasad/internal/cache"
@@ -25,11 +28,31 @@ func main() {
 		log.Fatal(err)
 	}
 
+	infoLog := log.New(os.Stdout, "INFO\t", log.Ltime|log.Ldate)
+	errorLog := log.New(os.Stdout, "ERROR\t", log.Ltime|log.Ldate|log.Lshortfile)
+
 	cache := cache.NewRedis()
 
-	server := api.NewApplication(config, db, cache, validate)
-	server.InfoLog.Println(fmt.Sprint("Started listening at port ", config.Port))
-	err = server.Run()
+	app := &api.Application{
+		Config:   config,
+		DB:       db,
+		Cache:    cache,
+		Validate: validate,
+		InfoLog:  infoLog,
+		ErrorLog: errorLog,
+	}
+
+	server := &http.Server{
+		Addr:         config.Port,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+		Handler:      app.Routes(),
+		ErrorLog:     errorLog,
+	}
+
+	app.InfoLog.Println(fmt.Sprint("Started listening at port ", config.Port))
+	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
 	}

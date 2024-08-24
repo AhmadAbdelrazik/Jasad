@@ -6,7 +6,7 @@ import (
 	"github.com/justinas/alice"
 )
 
-func (a *Application) Run() error {
+func (a *Application) Run() http.Handler {
 	mux := http.NewServeMux()
 
 	standard := alice.New(a.recoverPanic, secureHeaders, a.Logger)
@@ -38,6 +38,5 @@ func (a *Application) Run() error {
 	mux.Handle("PUT /users/{user}/workouts/{workout}", userAuth.ThenFunc(a.HandleUpdateWorkout))
 	mux.Handle("DELETE /users/{user}/workouts/{workout}", userAuth.ThenFunc(a.HandleDeleteWorkout))
 
-	err := http.ListenAndServe(a.Config.Port, standard.Then(mux))
-	return err
+	return standard.Then(mux)
 }
