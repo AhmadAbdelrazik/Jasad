@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // Creates an exercise and store it in the database
-// It accepts a CreateExerciseRequest struct
-// returns nil in success or an error
+// It accepts a ExerciseCreateRequest struct
+// returns ErrInvalidMuscles if any muscles are invalid
+// returns ErrDuplicateEntry if exercise name already exists
 func (st *MySQL) CreateExercise(ExerciseRequest *ExerciseCreateRequest) error {
 	tx, err := st.DB.Begin()
 	if err != nil {
@@ -26,7 +28,11 @@ func (st *MySQL) CreateExercise(ExerciseRequest *ExerciseCreateRequest) error {
 	result, err := tx.Exec(stmt, ExerciseRequest.ExerciseName, ExerciseRequest.ExerciseDescription, ExerciseRequest.ReferenceVideo)
 	if err != nil {
 		tx.Rollback()
-		return err
+		if strings.Contains(err.Error(), "DuplicateEntry") {
+			return ErrDuplicateEntry
+		} else {
+			return err
+		}
 	}
 
 	id, err := result.LastInsertId()

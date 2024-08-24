@@ -31,9 +31,9 @@ func TestJWT(t *testing.T) {
 				ID:      "002",
 			},
 		}
-		mySecret := []byte(`correct-secret`)
-		notMySecret := []byte(`incorrect-secret`)
-		tokenString, _ := SignJWT(claims, mySecret)
+		mySecret := `correct-secret`
+		notMySecret := `incorrect-secret`
+		tokenString, _ := SignJWT(claims, []byte(mySecret))
 		t.Run("Verifying correct token", func(t *testing.T) {
 			got, err := VerifyJWT(tokenString, mySecret)
 			assertClaimEquality(t, got, claims)

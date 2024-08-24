@@ -9,7 +9,9 @@ import (
 	"github.com/AhmadAbdelrazik/jasad/internal/storage"
 )
 
+// HandleCreateWorkout Creates workout and link it to the user
 func (a *Application) HandleCreateWorkout(w http.ResponseWriter, r *http.Request) {
+
 	var workoutRequest storage.WorkoutRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&workoutRequest); err != nil {

@@ -16,8 +16,11 @@ type Cache interface {
 	// Set sets v to the key for duration of time.
 	Set(key string, v string, duration time.Duration) error
 
-	// Gets the value of key. returns ErrNotExist if key
-	// Doesn't exist.
+	// Get Get the value from cache using key
+	//
+	// Cache Hit returns a string and a nil.
+	// Cache Miss returns "" and ErrNotExist.
+	// Errors in Cache returns "", and
 	Get(key string) (string, error)
 }
 

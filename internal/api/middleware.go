@@ -9,6 +9,8 @@ import (
 	"github.com/AhmadAbdelrazik/jasad/internal/storage"
 )
 
+// Logger used to log requests. For each session it prints
+// http Protocol, http Method, url path
 func (a *Application) Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		a.InfoLog.Printf("%v: %v %v\n", r.Proto, r.Method, r.URL.Path)
@@ -34,6 +36,7 @@ func (a *Application) recoverPanic(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
 func secureHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Security-Policy", " default-src 'self'; style-src 'self' fonts.googleapis.com; font-src fonts.gstatic.com")
@@ -48,15 +51,18 @@ func secureHeaders(next http.Handler) http.Handler {
 // Authenticate Verifies the JWT Token Signature.
 func (a *Application) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Get the JWT token from the request header 'Authorization'
 		authorizationHeader := r.Header.Get("Authorization")
 		tokenString := strings.TrimPrefix(authorizationHeader, "Bearer ")
 
+		// Check if the token has the prefix Bearer or not
 		if authorizationHeader == tokenString {
 			a.ClientError(w, http.StatusUnauthorized)
 			return
 		}
 
-		claims, err := VerifyJWT(tokenString, a.Config.AccessToken)
+		// Verifies the claims
+		claims, err := VerifyUserJWT(tokenString, a.Config.AccessToken)
 		if err != nil {
 			a.ClientError(w, http.StatusUnauthorized)
 			return
@@ -73,6 +79,8 @@ func (a *Application) Authenticate(next http.Handler) http.Handler {
 	})
 }
 
+// AuthorizeUserInfo Check whether the User is authorized to access
+// the resources
 func (a *Application) AuthorizeUserInfo(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userTarget := r.PathValue("user")

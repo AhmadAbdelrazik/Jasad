@@ -11,10 +11,14 @@ import (
 	"github.com/AhmadAbdelrazik/jasad/internal/storage"
 )
 
+// HandleSignup Handles the signup operation
+// It checks if the username is available, the password is strong enough.
+// Creates new user and send Token for user.
 func (a *Application) HandleSignup(w http.ResponseWriter, r *http.Request) {
-	// Read Input.
+	// Initialize UserRequest object to parse the request body
 	var userRequest storage.UserRequest
 
+	// Parse the request body using json, returns error at failure
 	if err := json.NewDecoder(r.Body).Decode(&userRequest); err != nil {
 		a.BadRequest(w)
 		return
@@ -22,15 +26,14 @@ func (a *Application) HandleSignup(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
-	// Validate Struct
+	// Validate the response
 	if err := a.Validate.Struct(userRequest); err != nil {
 		a.BadRequest(w)
 		return
 	}
 
-	// Add user to database
+	// Database Call
 	userJWT, err := a.DB.User.CreateUser(&userRequest)
-
 	if err != nil {
 		switch err {
 		case storage.ErrNoRecord:
@@ -43,7 +46,7 @@ func (a *Application) HandleSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// produce token
+	// Issue User JWT Token
 	token, err := IssueUserJWT(*userJWT, a.Config.AccessToken)
 	if err != nil {
 		a.ServerError(w, err)
@@ -51,7 +54,6 @@ func (a *Application) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// send token
-
 	Response := &struct {
 		Message string `json:"message"`
 		Token   string `json:"token"`
@@ -64,10 +66,14 @@ func (a *Application) HandleSignup(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// HandleSignIn Handles the signin operations
+// It checks if the username and password are valid.
+// Count the login attempts on valid usernames.
 func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
-	// Read Input
+	// Initialize UserRequest object to parse the request body
 	var userRequest storage.UserRequest
 
+	// Parse the request body using json, returns error at failure
 	if err := json.NewDecoder(r.Body).Decode(&userRequest); err != nil {
 		a.BadRequest(w)
 		return
@@ -75,7 +81,7 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
-	// validate Request
+	// Validate the response
 	if err := a.Validate.Struct(userRequest); err != nil {
 		a.BadRequest(w)
 		return
@@ -83,6 +89,9 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 
 	// Check login attempts in cache
 	var loginAttempts int
+
+	// The Cache hit returns a string, we need to convert it
+	// to int to track login attempts
 	attemptsRaw, err := a.Cache.Get(fmt.Sprintf("username: %s", userRequest.UserName))
 	if err != nil {
 		if err == cache.ErrNotExist {
@@ -93,15 +102,15 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Convert the Login attempts to int
 	loginAttempts, err = strconv.Atoi(attemptsRaw)
 	if err != nil {
 		a.ServerError(w, err)
 		return
 	}
 
-	fmt.Printf("loginAttempts: %v\n", loginAttempts)
-
-	if loginAttempts >= 5 {
+	// Check login attempts
+	if loginAttempts >= a.Config.LoginAttemptsLimit {
 		a.ClientError(w, http.StatusTooManyRequests)
 		return
 	}
@@ -109,28 +118,31 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 	// Call for the Database
 	userJWT, err := a.DB.User.CheckUserExists(&userRequest)
 	if err != nil {
-		if err == storage.ErrInvalidUsername {
+		switch err {
+		case storage.ErrInvalidUsername:
 			a.ClientError(w, http.StatusUnauthorized)
-		} else if err == storage.ErrInvalidPassword {
-			// Register login attempt on the username.
-			// We don't register globally to protect the cache from filling the heap
-			// with invalid usernames, and only set our cache on actual usernames
-			if err := a.Cache.Set(
+
+		// Register login attempt on valid usernames only.
+		// This Help keep the Cache clean from invalid usernames, and
+		// record login attempts on existing usernames only.
+		case storage.ErrInvalidPassword:
+			err := a.Cache.Set(
 				fmt.Sprintf("username: %s", userRequest.UserName),
 				fmt.Sprintf("%d", loginAttempts+1),
-				5*time.Minute); err != nil {
+				5*time.Minute)
+
+			if err != nil {
 				a.ServerError(w, err)
 				return
 			}
-
 			a.ClientError(w, http.StatusUnauthorized)
-		} else {
+		default:
 			a.ServerError(w, err)
 		}
 		return
 	}
 
-	// produce token
+	// Issue User JWT Token
 	token, err := IssueUserJWT(*userJWT, a.Config.AccessToken)
 	if err != nil {
 		a.ServerError(w, err)
@@ -138,7 +150,6 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// send token
-
 	Response := &struct {
 		Message string `json:"message"`
 		Token   string `json:"token"`
@@ -150,8 +161,14 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusAccepted, Response)
 }
 
+// HandleUserInfo Returns The userinfo containing username, role, and userID.
+// WARNING: This Handlers should be accessed only by the ADMIN users, as userIDs
+// are SENSETIVE INFORMATION.
 func (a *Application) HandleUserInfo(w http.ResponseWriter, r *http.Request) {
+	// Get the UserID (Parsed Earlier in the auth middleware)
 	userID := r.Context().Value("userID").(int)
+
+	// Database Call
 	user, err := a.DB.User.GetUser(userID)
 	if err != nil {
 		if err == storage.ErrNoRecord {

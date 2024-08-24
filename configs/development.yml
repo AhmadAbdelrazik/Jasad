@@ -2,3 +2,4 @@ env: development
 accessToken: 69zDfhhZUxnNl63VqmV3EQWja9++RsqORbltMyeTMVHm
 dsn: ahmad:password@/jasad?parseTime=true
 port: ":3000"
+loginAttemptsLimit: 5
