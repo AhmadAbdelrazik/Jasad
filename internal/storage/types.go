@@ -16,7 +16,6 @@ type Exercise struct {
 }
 
 type ExerciseUpdateRequest struct {
-	ExerciseID          int      `json:"exerciseID" validate:"required,gt=0"`
 	ExerciseName        string   `json:"exerciseName" validate:"required,min=3,max=30"`
 	ExerciseDescription string   `json:"exerciseDescription" validate:"required,max=300"`
 	ReferenceVideo      string   `json:"referenceVideo" validate:"required,url"`

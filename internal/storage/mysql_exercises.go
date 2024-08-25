@@ -315,8 +315,8 @@ func (st *MySQL) GetExerciseByID(ID int) (*Exercise, error) {
 // Updates an Exercise using Exercise ID.
 // Accepts an UpdateExerciseRequest struct.
 // Returns nil upon success or error.
-func (st *MySQL) UpdateExercise(Exercise *ExerciseUpdateRequest) error {
-	for _, muscle := range Exercise.Muscles {
+func (st *MySQL) UpdateExercise(exerciseID int, exercise *ExerciseUpdateRequest) error {
+	for _, muscle := range exercise.Muscles {
 		if err := st.MuscleExists(&muscle); err != nil {
 			return ErrInvalidMuscle
 		}
@@ -334,7 +334,7 @@ func (st *MySQL) UpdateExercise(Exercise *ExerciseUpdateRequest) error {
 	reference_video = ?
 	WHERE exercise_id = ?`
 
-	_, err = tx.Exec(stmt, Exercise.ExerciseName, Exercise.ExerciseDescription, Exercise.ReferenceVideo, Exercise.ExerciseID)
+	_, err = tx.Exec(stmt, exercise.ExerciseName, exercise.ExerciseDescription, exercise.ReferenceVideo, exerciseID)
 	if err != nil {
 		tx.Rollback()
 		if errors.Is(err, sql.ErrNoRows) {
@@ -345,15 +345,15 @@ func (st *MySQL) UpdateExercise(Exercise *ExerciseUpdateRequest) error {
 	}
 
 	stmt = `DELETE FROM muscles_exercises WHERE exercise_id = ?`
-	_, err = tx.Exec(stmt, Exercise.ExerciseID)
+	_, err = tx.Exec(stmt, exerciseID)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
 	stmt = `INSERT INTO muscles_exercises(exercise_id, muscle_name, muscle_group) VALUES (?,?,?)`
-	for _, muscle := range Exercise.Muscles {
-		if _, err := tx.Exec(stmt, Exercise.ExerciseID, muscle.MuscleName, muscle.MuscleGroup); err != nil {
+	for _, muscle := range exercise.Muscles {
+		if _, err := tx.Exec(stmt, exerciseID, muscle.MuscleName, muscle.MuscleGroup); err != nil {
 			tx.Rollback()
 			return err
 		}

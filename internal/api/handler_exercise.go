@@ -136,6 +136,16 @@ func (a *Application) HandleGetExerciseByName(w http.ResponseWriter, r *http.Req
 }
 
 func (a *Application) HandleUpdateExercise(w http.ResponseWriter, r *http.Request) {
+	// Get the id string from the path value
+	idStr := r.PathValue("id")
+
+	// Convert the string to int
+	exerciseID, err := strconv.Atoi(idStr)
+	if err != nil {
+		a.BadRequest(w)
+		return
+	}
+
 	// Initialize ExerciseUpdateRequest object to parse the request body
 	exercise := storage.ExerciseUpdateRequest{}
 
@@ -153,7 +163,7 @@ func (a *Application) HandleUpdateExercise(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Database Call
-	if err := a.DB.Exercise.UpdateExercise(&exercise); err != nil {
+	if err := a.DB.Exercise.UpdateExercise(exerciseID, &exercise); err != nil {
 		switch err {
 		case storage.ErrInvalidMuscle:
 			a.BadRequest(w)

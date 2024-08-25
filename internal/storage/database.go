@@ -86,7 +86,7 @@ type IExerciseStorage interface {
 	//
 	// Returns ErrInvalidMuscle if any one of the muscles are invalid
 	// Returns ErrNoRecord if exercise with exerciseID doesn't exist
-	UpdateExercise(*ExerciseUpdateRequest) error
+	UpdateExercise(exerciseID int, exercise *ExerciseUpdateRequest) error
 
 	// DeleteExercise Deletes the exercise identified by exerciseID
 	//
