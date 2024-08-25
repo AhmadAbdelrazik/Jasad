@@ -1,5 +1,7 @@
 # Jasad
 
+Jasad is a Fitness tracker API
+
 Jasad is a backend API for managing user accounts, exercises, and workout sessions. This project provides a robust and scalable solution for fitness applications, allowing users to manage their personal data, exercise routines, and workout sessions effectively.
 
 ## Features
