@@ -17,6 +17,7 @@ func (st *MySQL) CreateExercise(ExerciseRequest *ExerciseCreateRequest) error {
 		return err
 	}
 
+	// Validate Muscles
 	for _, muscle := range ExerciseRequest.Muscles {
 		if err := st.MuscleExists(&muscle); err != nil {
 			return ErrInvalidMuscle
@@ -28,14 +29,15 @@ func (st *MySQL) CreateExercise(ExerciseRequest *ExerciseCreateRequest) error {
 	result, err := tx.Exec(stmt, ExerciseRequest.ExerciseName, ExerciseRequest.ExerciseDescription, ExerciseRequest.ReferenceVideo)
 	if err != nil {
 		tx.Rollback()
-		if strings.Contains(err.Error(), "DuplicateEntry") {
+		if strings.Contains(err.Error(), "Duplicate entry") {
 			return ErrDuplicateEntry
 		} else {
 			return err
 		}
 	}
 
-	id, err := result.LastInsertId()
+	// Get the ExerciseID for muscles_exercises insertion
+	exerciseID, err := result.LastInsertId()
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -43,17 +45,19 @@ func (st *MySQL) CreateExercise(ExerciseRequest *ExerciseCreateRequest) error {
 
 	stmt = `INSERT INTO muscles_exercises(muscle_name, muscle_group, exercise_id) VALUES (?,?,?)`
 
+	// Utilize Go routines for muscle insertion to database. using channels to return errors if there is any
 	ch := make(chan error, len(ExerciseRequest.Muscles))
 
 	for i, m := range ExerciseRequest.Muscles {
 		go func() {
-			if _, err := tx.Exec(stmt, m.MuscleName, m.MuscleGroup, int(id)); err != nil {
+			if _, err := tx.Exec(stmt, m.MuscleName, m.MuscleGroup, int(exerciseID)); err != nil {
 				ch <- fmt.Errorf("error at index %d: %w", i, err)
 			}
 			ch <- nil
 		}()
 	}
 
+	// Check for any received errors in the channel
 	for range ExerciseRequest.Muscles {
 		if err := <-ch; err != nil {
 			tx.Rollback()
@@ -61,6 +65,7 @@ func (st *MySQL) CreateExercise(ExerciseRequest *ExerciseCreateRequest) error {
 		}
 	}
 
+	// Commit changes
 	if err = tx.Commit(); err != nil {
 		tx.Rollback()
 		return err
@@ -76,6 +81,7 @@ func (st *MySQL) GetExercises() ([]Exercise, error) {
 		return nil, err
 	}
 
+	// Get all exercises
 	stmt := `SELECT exercise_id, exercise_name, exercise_description, reference_video FROM exercises`
 	rows, err := tx.Query(stmt)
 	if err != nil {
@@ -89,6 +95,7 @@ func (st *MySQL) GetExercises() ([]Exercise, error) {
 
 	exercises := []Exercise{}
 
+	// enumerate over the result to populate the exercises.
 	for rows.Next() {
 		exercise := Exercise{}
 		err := rows.Scan(&exercise.ExerciseID, &exercise.ExerciseName, &exercise.ExerciseDescription, &exercise.ReferenceVideo)
@@ -106,9 +113,42 @@ func (st *MySQL) GetExercises() ([]Exercise, error) {
 
 	stmt = `SELECT muscle_name, muscle_group from muscles_exercises WHERE exercise_id = ?`
 
+	ch := make(chan error, len(exercises)) // make error channels with the length of exercises array
+
 	for i := range exercises {
-		rows, err := tx.Query(stmt, exercises[i].ExerciseID)
-		if err != nil {
+		go func() {
+			// get all muscles related to the exercise
+			rows, err := tx.Query(stmt, exercises[i].ExerciseID)
+			if err != nil {
+				ch <- err
+			}
+
+			var muscles []Muscle
+
+			// enumerate over them and add them to muscles slice
+			for rows.Next() {
+				var muscle Muscle
+				if err := rows.Scan(&muscle.MuscleName, &muscle.MuscleGroup); err != nil {
+					ch <- err
+				}
+				muscles = append(muscles, muscle)
+			}
+
+			// check for enumeration errors
+			if err := rows.Err(); err != nil {
+				ch <- err
+			}
+
+			// add the muscles to the related exercises
+			exercises[i].Muscles = muscles
+
+			ch <- nil
+		}()
+	}
+
+	// range over the retrieved errors from the channel.
+	for range exercises {
+		if err := <-ch; err != nil {
 			tx.Rollback()
 			if errors.Is(err, sql.ErrNoRows) {
 				return nil, ErrNoRecord
@@ -116,25 +156,9 @@ func (st *MySQL) GetExercises() ([]Exercise, error) {
 				return nil, err
 			}
 		}
-
-		var muscles []Muscle
-
-		for rows.Next() {
-			var muscle Muscle
-			if err := rows.Scan(&muscle.MuscleName, &muscle.MuscleGroup); err != nil {
-				tx.Rollback()
-				return nil, err
-			}
-			muscles = append(muscles, muscle)
-		}
-
-		if err := rows.Err(); err != nil {
-			return nil, err
-		}
-
-		exercises[i].Muscles = muscles
 	}
 
+	// Commit changes
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
 		return nil, err

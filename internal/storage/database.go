@@ -81,10 +81,21 @@ type IExerciseStorage interface {
 	// cases, returns the exercise.
 	GetExerciseByName(string) (*Exercise, error)
 
+	// UpdateExercise Updates the exercise identified by
+	// exerciseID.
+	//
+	// Returns ErrInvalidMuscle if any one of the muscles are invalid
+	// Returns ErrNoRecord if exercise with exerciseID doesn't exist
 	UpdateExercise(*ExerciseUpdateRequest) error
 
+	// DeleteExercise Deletes the exercise identified by exerciseID
+	//
+	// Returns ErrNoRecord if the exercise doesn't exist.
 	DeleteExercise(int) error
 
+	// MuscleExists Check if muscle Exists.
+	//
+	// Returns ErrInvalidMuscle if muscle doesn't exist.
 	MuscleExists(*Muscle) error
 }
 

@@ -16,11 +16,13 @@ func (st *MySQL) CreateUser(user *UserRequest) (*UserJWT, error) {
 		return nil, err
 	}
 
+	// Hash the incoming password for storage
 	hash, err := HashUserPasswords(user.Password, user.UserName)
 	if err != nil {
 		return nil, err
 	}
 
+	// Store the username, password. the role is user by default.
 	stmt := `INSERT INTO users(user_name, password, role, created_at) VALUES (?,?,?,?)`
 
 	_, err = tx.Exec(stmt, user.UserName, hash, "user", time.Now())
@@ -33,11 +35,13 @@ func (st *MySQL) CreateUser(user *UserRequest) (*UserJWT, error) {
 		}
 	}
 
+	// Construct userJWT for issuing a token
 	userJWT := &UserJWT{
 		UserName: user.UserName,
 		Role:     "user",
 	}
 
+	// Commit the changes
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
@@ -54,6 +58,8 @@ func (st *MySQL) CheckUserExists(user *UserRequest) (*UserJWT, error) {
 		return nil, err
 	}
 
+	// Get the hashed password for password comparison
+	// and get the role for issuing JWT token
 	stmt := `SELECT password, role FROM users WHERE user_name = ?`
 
 	row := tx.QueryRow(stmt, user.UserName)
@@ -68,6 +74,7 @@ func (st *MySQL) CheckUserExists(user *UserRequest) (*UserJWT, error) {
 		}
 	}
 
+	// Compare the hashed password in the database with the given user credentials
 	check, err := CompareProvidedPassword(user.Password, user.UserName, hash)
 	if err != nil {
 		return nil, err
@@ -80,7 +87,7 @@ func (st *MySQL) CheckUserExists(user *UserRequest) (*UserJWT, error) {
 	return &UserJWT{UserName: user.UserName, Role: role}, nil
 }
 
-// GetUserID Gets UserID using the username. It's preferable to
+// GetUserID Gets UserID using the username.
 // use userID for internal operations, and use username only
 // for authentication. returns ErrNoRecord if the username is
 // not linked with any User. or server error if happened.
@@ -107,6 +114,8 @@ func (st *MySQL) GetUserID(username string) (int, error) {
 	return userId, nil
 }
 
+// GetUser Gets the user information using userID.
+// Used with admin access only since it exposes the userID.
 func (st *MySQL) GetUser(userID int) (*UserResponse, error) {
 	tx, err := st.DB.Begin()
 	if err != nil {

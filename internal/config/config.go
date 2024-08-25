@@ -12,11 +12,13 @@ type Configuration struct {
 	LoginAttemptsLimit int
 }
 
-func NewConfig() (*Configuration, error) {
+// NewConfig parses the config from yaml configuration file.
+// The default config path are ./configs
+func NewConfig(fileName string) (*Configuration, error) {
 	var config *Configuration
 
 	viper.AddConfigPath("./configs")
-	viper.SetConfigName("development")
+	viper.SetConfigName(fileName)
 	viper.SetConfigType("yaml")
 
 	if err := viper.ReadInConfig(); err != nil {

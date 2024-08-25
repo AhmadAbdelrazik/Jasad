@@ -7,12 +7,14 @@ import (
 	"time"
 )
 
+// CreateWorkout Creates a new workout session and assign it to userID
 func (st *MySQL) CreateWorkout(workout WorkoutRequest, userID int) (int, error) {
 	tx, err := st.DB.Begin()
 	if err != nil {
 		return 0, err
 	}
 
+	// Create a new session.
 	stmt := `INSERT INTO sessions(user_id, date) VALUES (?,?)`
 
 	res, err := tx.Exec(stmt, userID, workout.Date.Round(24*time.Hour))
@@ -21,12 +23,14 @@ func (st *MySQL) CreateWorkout(workout WorkoutRequest, userID int) (int, error) 
 		return 0, err
 	}
 
+	// Get the sessionID
 	sessionID, err := res.LastInsertId()
 	if err != nil {
 		tx.Rollback()
 		return 0, err
 	}
 
+	// Utilizing go routines to Create new workouts and assign it to the session.
 	ch := make(chan error, len(workout.Workouts))
 
 	stmt = `INSERT INTO workouts(session_id, exercise_id, reps, sets, weights) VALUES (?, ?, ?, ?, ?)`
@@ -40,6 +44,7 @@ func (st *MySQL) CreateWorkout(workout WorkoutRequest, userID int) (int, error) 
 		}()
 	}
 
+	// Check for any errors
 	for range workout.Workouts {
 		if err := <-ch; err != nil {
 			tx.Rollback()
@@ -47,6 +52,7 @@ func (st *MySQL) CreateWorkout(workout WorkoutRequest, userID int) (int, error) 
 		}
 	}
 
+	// Commit the changes
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
 		return 0, err
@@ -55,6 +61,9 @@ func (st *MySQL) CreateWorkout(workout WorkoutRequest, userID int) (int, error) 
 	return int(sessionID), nil
 }
 
+// GetWorkout Gets the workout session using sessionID for a specific user
+// GetWorkout takes care of BOLA attacks since it gets sessions that are
+// connected with the userID only
 func (st *MySQL) GetWorkout(sessionID, userID int) (*Session, error) {
 	tx, err := st.DB.Begin()
 	if err != nil {
@@ -66,6 +75,7 @@ func (st *MySQL) GetWorkout(sessionID, userID int) (*Session, error) {
 		UserID:    userID,
 	}
 
+	// get the session date. also used to know if session exists
 	stmt := `SELECT date FROM sessions WHERE user_id = ? AND session_id = ?`
 	row := tx.QueryRow(stmt, userID, sessionID)
 
@@ -77,6 +87,7 @@ func (st *MySQL) GetWorkout(sessionID, userID int) (*Session, error) {
 		}
 	}
 
+	// Get all workouts attached to the session
 	stmt = `SELECT workout_id, exercise_id, reps, sets, weights FROM workouts WHERE session_id = ?`
 
 	rows, err := tx.Query(stmt, sessionID)
@@ -88,9 +99,12 @@ func (st *MySQL) GetWorkout(sessionID, userID int) (*Session, error) {
 		}
 	}
 
+	// enumerate the workouts and add them to the session object one by one
 	for rows.Next() {
 		var w Workout
-		if err := rows.Scan(&w.WorkoutID, &w.ExerciseID, &w.Reps, &w.Sets, &w.Weights); err != nil {
+
+		err := rows.Scan(&w.WorkoutID, &w.ExerciseID, &w.Reps, &w.Sets, &w.Weights)
+		if err != nil {
 			return nil, err
 		}
 
@@ -103,6 +117,7 @@ func (st *MySQL) GetWorkout(sessionID, userID int) (*Session, error) {
 	return &session, nil
 }
 
+// GetWorkouts Get all the sessions created by the userID
 func (st *MySQL) GetWorkouts(userID int) ([]SessionResponse, error) {
 	tx, err := st.DB.Begin()
 	if err != nil {
@@ -137,12 +152,14 @@ func (st *MySQL) GetWorkouts(userID int) ([]SessionResponse, error) {
 	return sessions, nil
 }
 
+// UpdateWorkout updates the workouts associated with sessionID of userID
 func (st *MySQL) UpdateWorkout(userID, sessionID int, workout WorkoutRequest) error {
 	tx, err := st.DB.Begin()
 	if err != nil {
 		return err
 	}
 
+	// Update the date
 	stmt := `UPDATE sessions
 	SET date = ?
 	WHERE user_id = ? AND session_id = ?`
@@ -155,6 +172,7 @@ func (st *MySQL) UpdateWorkout(userID, sessionID int, workout WorkoutRequest) er
 		}
 	}
 
+	// Deletes all old associated workouts
 	stmt = `DELETE FROM workouts WHERE user_id = ? AND session_id = ?`
 
 	_, err = tx.Exec(stmt, userID, sessionID)
@@ -164,8 +182,10 @@ func (st *MySQL) UpdateWorkout(userID, sessionID int, workout WorkoutRequest) er
 		return err
 	}
 
+	// Adds all the new associated workouts
 	stmt = `INSERT INTO workouts(session_id, exercise_id, reps, sets, weights) VALUES(?, ?, ?, ?, ?)`
 
+	// uses go routines to insert workouts
 	ch := make(chan error, len(workout.Workouts))
 
 	for i, w := range workout.Workouts {
@@ -179,6 +199,7 @@ func (st *MySQL) UpdateWorkout(userID, sessionID int, workout WorkoutRequest) er
 		}()
 	}
 
+	// check for any errors
 	for range workout.Workouts {
 		if err := <-ch; err != nil {
 			tx.Rollback()
@@ -186,6 +207,7 @@ func (st *MySQL) UpdateWorkout(userID, sessionID int, workout WorkoutRequest) er
 		}
 	}
 
+	// Commit changes
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
 		return err
@@ -193,34 +215,42 @@ func (st *MySQL) UpdateWorkout(userID, sessionID int, workout WorkoutRequest) er
 	return nil
 }
 
+// DeleteWorkout Deletes the session identified by sessionID and userID
 func (st *MySQL) DeleteWorkout(userID, sessionID int) error {
 	tx, err := st.DB.Begin()
 	if err != nil {
 		return err
 	}
 
-	stmt := `DELETE FROM sessions WHERE user_id = ? AND session_id = ?`
-
-	if res, err := tx.Exec(stmt, userID, sessionID); err != nil {
-		tx.Rollback()
-		return err
-	} else {
-		if val, err := res.LastInsertId(); err != nil {
-			tx.Rollback()
-			return err
-		} else if val == 0 {
-			tx.Rollback()
-			return ErrNoRecord
-		}
-	}
-
-	stmt = `DELETE FROM workouts WHERE session_id = ?`
+	// Delete the workouts associated with sessions
+	stmt := `DELETE FROM workouts WHERE session_id = ?`
 	_, err = tx.Exec(stmt, sessionID)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
+	// delete the session
+	stmt = `DELETE FROM sessions WHERE user_id = ? AND session_id = ?`
+
+	res, err := tx.Exec(stmt, userID, sessionID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Check if there was any deleted rows
+	rows, err := res.RowsAffected()
+
+	if err != nil {
+		tx.Rollback()
+		return err
+	} else if rows == 0 {
+		tx.Rollback()
+		return ErrNoRecord
+	}
+
+	// Commit changes
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
 		return err

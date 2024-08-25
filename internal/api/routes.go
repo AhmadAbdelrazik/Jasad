@@ -6,6 +6,8 @@ import (
 	"github.com/justinas/alice"
 )
 
+// Routes Contains the main application multiplexer.
+// Here We specify all the end points patterns
 func (a *Application) Routes() http.Handler {
 	mux := http.NewServeMux()
 

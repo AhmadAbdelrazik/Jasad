@@ -35,13 +35,13 @@ func TestJWT(t *testing.T) {
 		notMySecret := `incorrect-secret`
 		tokenString, _ := SignJWT(claims, []byte(mySecret))
 		t.Run("Verifying correct token", func(t *testing.T) {
-			got, err := VerifyJWT(tokenString, mySecret)
+			got, err := VerifyUserJWT(tokenString, mySecret)
 			assertClaimEquality(t, got, claims)
 			assertNoError(t, err)
 		})
 
 		t.Run("Verifying incorrect token", func(t *testing.T) {
-			got, err := VerifyJWT(tokenString, notMySecret)
+			got, err := VerifyUserJWT(tokenString, notMySecret)
 			assertNoClaim(t, got)
 			assertError(t, err, jwt.ErrInvalidKey)
 		})

@@ -2,6 +2,8 @@ package storage
 
 import "github.com/alexedwards/argon2id"
 
+// HashUserPasswords hashes the username and password using argon2id
+// return the hashed string of 98 characters
 func HashUserPasswords(password, username string) (string, error) {
 
 	// Parameters based on OWASP recommendation for argon2id.
@@ -20,6 +22,7 @@ func HashUserPasswords(password, username string) (string, error) {
 	return hash, nil
 }
 
+// CompareProvidedPassword Compares the provided password with the hash.
 func CompareProvidedPassword(password, username, hash string) (bool, error) {
 	check, err := argon2id.ComparePasswordAndHash(password+username, hash)
 	if err != nil {

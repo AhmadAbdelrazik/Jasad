@@ -22,7 +22,7 @@ func main() {
 	validate = validator.New()
 
 	// Load the configs from configs/development.yml
-	config, err := config.NewConfig()
+	config, err := config.NewConfig("development")
 	if err != nil {
 		log.Fatal(err)
 	}
