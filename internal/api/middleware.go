@@ -135,3 +135,31 @@ func (a *Application) AuthorizeAdmin(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
+
+func (a *Application) RateLimiter(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		ip := strings.Split(r.RemoteAddr, "]")[0] + "]"
+
+		ipCacheKey := fmt.Sprintf("rateLimit : %v", ip)
+
+		attempts, err := a.Cache.Incr(ipCacheKey)
+		if err != nil {
+			a.ServerError(w, err)
+			return
+		}
+
+		if attempts == 1 {
+			err := a.Cache.Expire(ipCacheKey, a.Config.RateDuration)
+			if err != nil {
+				a.ServerError(w, err)
+				return
+			}
+		} else if attempts >= a.Config.RateLimit {
+			a.ClientError(w, http.StatusTooManyRequests)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}

@@ -11,7 +11,7 @@ import (
 func (a *Application) Routes() http.Handler {
 	mux := http.NewServeMux()
 
-	standard := alice.New(a.recoverPanic, secureHeaders, a.Logger)
+	standard := alice.New(a.recoverPanic, secureHeaders, a.Logger, a.RateLimiter)
 	userAuth := alice.New(a.Authenticate, a.AuthorizeUserInfo)
 	adminAuth := alice.New(a.Authenticate, a.AuthorizeAdmin)
 

@@ -4,10 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
-	"time"
 
-	"github.com/AhmadAbdelrazik/jasad/internal/cache"
 	"github.com/AhmadAbdelrazik/jasad/internal/storage"
 )
 
@@ -87,34 +84,6 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check login attempts in cache
-	var loginAttempts int
-
-	// The Cache hit returns a string, we need to convert it
-	// to int to track login attempts
-	attemptsRaw, err := a.Cache.Get(fmt.Sprintf("username: %s", userRequest.UserName))
-	if err != nil {
-		if err == cache.ErrNotExist {
-			attemptsRaw = "0"
-		} else {
-			a.ServerError(w, err)
-			return
-		}
-	}
-
-	// Convert the Login attempts to int
-	loginAttempts, err = strconv.Atoi(attemptsRaw)
-	if err != nil {
-		a.ServerError(w, err)
-		return
-	}
-
-	// Check login attempts
-	if loginAttempts >= a.Config.LoginAttemptsLimit {
-		a.ClientError(w, http.StatusTooManyRequests)
-		return
-	}
-
 	// Call for the Database
 	userJWT, err := a.DB.User.CheckUserExists(&userRequest)
 	if err != nil {
@@ -126,15 +95,25 @@ func (a *Application) HandleSignIn(w http.ResponseWriter, r *http.Request) {
 		// This Help keep the Cache clean from invalid usernames, and
 		// record login attempts on existing usernames only.
 		case storage.ErrInvalidPassword:
-			err := a.Cache.Set(
-				fmt.Sprintf("username: %s", userRequest.UserName),
-				fmt.Sprintf("%d", loginAttempts+1),
-				5*time.Minute)
+			usernameCacheKey := fmt.Sprintf("usernameLimit: %v", userRequest.UserName)
 
+			attempts, err := a.Cache.Incr(usernameCacheKey)
 			if err != nil {
 				a.ServerError(w, err)
 				return
 			}
+
+			if attempts == 1 {
+				err := a.Cache.Expire(usernameCacheKey, a.Config.LoginAttemptsDuration*60)
+				if err != nil {
+					a.ServerError(w, err)
+					return
+				}
+			} else if attempts >= a.Config.LoginAttemptsLimit {
+				a.ClientError(w, http.StatusTooManyRequests)
+				return
+			}
+
 			a.ClientError(w, http.StatusUnauthorized)
 		default:
 			a.ServerError(w, err)
