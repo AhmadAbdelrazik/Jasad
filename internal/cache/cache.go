@@ -10,6 +10,7 @@ import (
 
 var (
 	ErrNotExist = errors.New("key doesn't exist")
+	ErrBadValue = errors.New("value is not an int") // Used for Incr opertaion
 )
 
 type Cache interface {
@@ -22,6 +23,16 @@ type Cache interface {
 	// Cache Miss returns "" and ErrNotExist.
 	// Errors in Cache returns "", and
 	Get(key string) (string, error)
+
+	// Incr Increment value in the cache.
+	//
+	// if the key doesn't exist, Incr creates
+	// the key and sets it to 1
+	Incr(key string) (int, error)
+
+	// Expire sets an expire time for a key
+	// returns ErrNotExist in case of error
+	Expire(key string, seconds int) error
 }
 
 type Redis struct {
@@ -54,4 +65,29 @@ func (r *Redis) Get(key string) (string, error) {
 	}
 
 	return val, nil
+}
+
+func (r *Redis) Incr(key string) (int, error) {
+	val, err := r.DB.Incr(context.Background(), key).Result()
+
+	if err != nil {
+		return 0, ErrBadValue
+	}
+
+	return int(val), nil
+}
+
+func (r *Redis) Expire(key string, seconds int) error {
+	val, err := r.DB.Expire(context.Background(), key, time.Duration(seconds)*time.Second).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return ErrNotExist
+		}
+	}
+
+	if !val {
+		return ErrNotExist
+	}
+
+	return nil
 }
