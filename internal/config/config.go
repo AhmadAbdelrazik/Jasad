@@ -5,11 +5,14 @@ import (
 )
 
 type Configuration struct {
-	Env                string
-	AccessToken        string
-	Dsn                string
-	Port               string
-	LoginAttemptsLimit int
+	Env                   string // Environment Name
+	AccessToken           string // Access Token Secret for the JWT
+	Dsn                   string // DSN for connection to SQL database
+	Port                  string
+	LoginAttemptsLimit    int // rate the login attempt per username
+	LoginAttemptsDuration int
+	RateLimit             int // rate the requests per ip address
+	RateDuration          int
 }
 
 // NewConfig parses the config from yaml configuration file.
