@@ -98,6 +98,7 @@ func (st *MySQL) GetWorkout(sessionID, userID int) (*Session, error) {
 			return nil, err
 		}
 	}
+	defer rows.Close()
 
 	// enumerate the workouts and add them to the session object one by one
 	for rows.Next() {
@@ -135,6 +136,8 @@ func (st *MySQL) GetWorkouts(userID int) ([]SessionResponse, error) {
 		}
 		return nil, err
 	}
+
+	defer rows.Close()
 
 	for rows.Next() {
 		s := SessionResponse{}

@@ -93,6 +93,8 @@ func (st *MySQL) GetExercises() ([]Exercise, error) {
 		}
 	}
 
+	defer rows.Close()
+
 	exercises := []Exercise{}
 
 	// enumerate over the result to populate the exercises.
@@ -122,6 +124,7 @@ func (st *MySQL) GetExercises() ([]Exercise, error) {
 			if err != nil {
 				ch <- err
 			}
+			defer rows.Close()
 
 			var muscles []Muscle
 
@@ -186,6 +189,7 @@ func (st *MySQL) GetExercisesByMuscle(muscle Muscle) ([]Exercise, error) {
 			return nil, err
 		}
 	}
+	defer rows.Close()
 
 	var IDs []int
 
@@ -244,6 +248,8 @@ func (st *MySQL) GetExerciseByName(exerciseName string) (*Exercise, error) {
 		return nil, err
 	}
 
+	defer rows.Close()
+
 	for rows.Next() {
 		var muscle Muscle
 
@@ -292,6 +298,7 @@ func (st *MySQL) GetExerciseByID(ID int) (*Exercise, error) {
 		tx.Rollback()
 		return nil, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var muscle Muscle
