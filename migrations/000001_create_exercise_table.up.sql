@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS exercises(
+	id SERIAL PRIMARY KEY,
+	name VARCHAR(40) NOT NULL UNIQUE,
+	muscle VARCHAR(30) NOT NULL,
+	instructions TEXT NOT NULL,
+	additional_info TEXT NOT NULL,
+	image_url TEXT NOT NULL,
+	version INT NOT NULL DEFAULT 1
+);

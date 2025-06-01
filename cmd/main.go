@@ -19,10 +19,12 @@ func main() {
 		log.Fatal().Err(err).Msg("")
 	}
 
-	app := application.New(*cfg)
+	app, err := application.New(*cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
 
 	if err := app.Serve(); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 }
-
