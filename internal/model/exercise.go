@@ -11,12 +11,6 @@ import (
 	"github.com/ahmadabdelrazik/jasad/pkg/validator"
 )
 
-var (
-	ErrAlreadyExists = errors.New("already exists")
-	ErrNotFound      = errors.New("resource not found")
-	ErrEditConflict  = errors.New("update conflict")
-)
-
 type Exercise struct {
 	ID     int    `json:"id"`
 	Name   string `json:"name"`

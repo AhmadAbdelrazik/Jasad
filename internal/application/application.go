@@ -26,6 +26,7 @@ import (
 type Application struct {
 	cfg    config.Config
 	models *model.Model
+	oauth  OAuthConfig
 	wg     sync.WaitGroup
 }
 
@@ -37,6 +38,7 @@ func New(cfg config.Config) (*Application, error) {
 	return &Application{
 		cfg:    cfg,
 		models: model,
+		oauth:  newOAuthConfig(cfg),
 	}, nil
 }
 

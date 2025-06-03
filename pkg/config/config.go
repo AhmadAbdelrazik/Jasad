@@ -7,8 +7,11 @@ import (
 )
 
 type Config struct {
-	DSN  string `env:"JASAD_DB_DSN"`
-	Port int    `env:"PORT"`
+	DSN                string `env:"JASAD_DB_DSN"`
+	Origin             string `env:"ORIGIN"`
+	Port               int    `env:"PORT"`
+	GoogleClientID     string `env:"GOOGLE_CLIENT_ID"`
+	GoogleClientSecret string `env:"GOOGLE_CLIENT_SECRET"`
 }
 
 func Load(fileNames ...string) (*Config, error) {
