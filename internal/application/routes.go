@@ -18,8 +18,8 @@ func (app *Application) Routes() http.Handler {
 	mux.HandleFunc("GET /google_login", app.googleLoginHandler)
 	mux.HandleFunc("GET /google_callback", app.googleCallbackHandler)
 
-	mux.HandleFunc("GET /users", app.IsAuthorized(app.GetAllUsers))
-	mux.HandleFunc("GET /users/{id}", app.IsAuthorized(app.getUserByIDHandler, model.RoleUser))
+	mux.HandleFunc("GET /v1/users", app.IsAuthorized(app.GetAllUsers))
+	mux.HandleFunc("GET /v1/users/{id}", app.IsAuthorized(app.getUserByIDHandler, model.RoleUser))
 
-	return mux
+	return app.recoverPanic(app.rateLimit(mux))
 }

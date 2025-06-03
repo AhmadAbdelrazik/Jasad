@@ -7,11 +7,14 @@ import (
 )
 
 type Config struct {
-	DSN                string `env:"JASAD_DB_DSN"`
-	Origin             string `env:"ORIGIN"`
-	Port               int    `env:"PORT"`
-	GoogleClientID     string `env:"GOOGLE_CLIENT_ID"`
-	GoogleClientSecret string `env:"GOOGLE_CLIENT_SECRET"`
+	DSN                string  `env:"JASAD_DB_DSN"`
+	Origin             string  `env:"ORIGIN"`
+	Port               int     `env:"PORT"`
+	GoogleClientID     string  `env:"GOOGLE_CLIENT_ID"`
+	GoogleClientSecret string  `env:"GOOGLE_CLIENT_SECRET"`
+	LimiterEnable      bool    `env:"LIMITER_ENABLED" envdefault:"true"`
+	LimiterRPS         float64 `env:"LIMITER_RPS" envdefault:"2"`
+	LimiterBurst       int     `env:"LIMITER_BURST" envdefault:"4"`
 }
 
 func Load(fileNames ...string) (*Config, error) {
