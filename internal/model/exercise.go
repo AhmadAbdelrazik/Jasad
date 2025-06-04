@@ -227,3 +227,52 @@ func (r *ExerciseRepository) Delete(id int) error {
 
 	return nil
 }
+
+func (r *ExerciseRepository) GetByIDs(ids ...int) ([]*Exercise, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	query := `
+	SELECT id, name, muscle, instructions, additional_info, image_url, version
+	FROM exercises
+	WHERE id = $1
+	`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	exercises := make([]*Exercise, len(ids))
+	for i := range exercises {
+		exercises[i].ID = ids[i]
+	}
+
+	for i := range exercises {
+		err := tx.QueryRowContext(ctx, query, exercises[i].ID).Scan(
+			&exercises[i].ID,
+			&exercises[i].Name,
+			&exercises[i].Muscle,
+			&exercises[i].Instructions,
+			&exercises[i].AdditionalInfo,
+			&exercises[i].ImageURL,
+			&exercises[i].Version,
+		)
+		if err != nil {
+			tx.Rollback()
+			switch {
+			case errors.Is(err, sql.ErrNoRows):
+				return nil, ErrNotFound
+			default:
+				return nil, err
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	return exercises, nil
+}

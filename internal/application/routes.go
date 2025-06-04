@@ -21,5 +21,7 @@ func (app *Application) Routes() http.Handler {
 	mux.HandleFunc("GET /v1/users", app.IsAuthorized(app.GetAllUsers))
 	mux.HandleFunc("GET /v1/users/{id}", app.IsAuthorized(app.getUserByIDHandler, model.RoleUser))
 
+	mux.HandleFunc("GET /v1/workouts", app.IsAuthorized(app.createWorkoutHandler, model.RoleUser))
+
 	return app.recoverPanic(app.rateLimit(mux))
 }

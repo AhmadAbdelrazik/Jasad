@@ -17,6 +17,7 @@ type Model struct {
 	Exercises *ExerciseRepository
 	Users     *UserRepository
 	Tokens    *TokenRepository
+	Workouts  *WorkoutRepository
 }
 
 func New(dsn string) (*Model, error) {
@@ -38,5 +39,7 @@ func New(dsn string) (*Model, error) {
 		Exercises: &ExerciseRepository{db: db},
 		Users:     &UserRepository{db: db},
 		Tokens:    &TokenRepository{redis: redis},
+		Workouts:  &WorkoutRepository{db: db},
 	}, nil
+
 }
