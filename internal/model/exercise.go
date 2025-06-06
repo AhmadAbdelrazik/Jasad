@@ -243,20 +243,19 @@ func (r *ExerciseRepository) GetByIDs(ids ...int) ([]*Exercise, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	exercises := make([]*Exercise, len(ids))
-	for i := range exercises {
-		exercises[i].ID = ids[i]
-	}
+	var exercises []*Exercise
 
-	for i := range exercises {
-		err := tx.QueryRowContext(ctx, query, exercises[i].ID).Scan(
-			&exercises[i].ID,
-			&exercises[i].Name,
-			&exercises[i].Muscle,
-			&exercises[i].Instructions,
-			&exercises[i].AdditionalInfo,
-			&exercises[i].ImageURL,
-			&exercises[i].Version,
+	for _, id := range ids {
+		var exercise Exercise
+
+		err := tx.QueryRowContext(ctx, query, id).Scan(
+			&exercise.ID,
+			&exercise.Name,
+			&exercise.Muscle,
+			&exercise.Instructions,
+			&exercise.AdditionalInfo,
+			&exercise.ImageURL,
+			&exercise.Version,
 		)
 		if err != nil {
 			tx.Rollback()
@@ -267,6 +266,8 @@ func (r *ExerciseRepository) GetByIDs(ids ...int) ([]*Exercise, error) {
 				return nil, err
 			}
 		}
+
+		exercises = append(exercises, &exercise)
 	}
 
 	if err := tx.Commit(); err != nil {

@@ -19,11 +19,11 @@ func (app *Application) createWorkoutHandler(w http.ResponseWriter, r *http.Requ
 	var input struct {
 		Name      string `json:"name"`
 		Exercises []struct {
-			Order      int `json:"order"` // order in the workout
-			ExerciseID int `json:"exercise_id"`
-			Sets       int `json:"sets"`
-			Reps       int `json:"reps,omitempty"`
-			Weights    int `json:"weights,omitempty"`
+			Order      int     `json:"order"` // order in the workout
+			ExerciseID int     `json:"exercise_id"`
+			Sets       int     `json:"sets"`
+			Reps       int     `json:"reps,omitempty"`
+			Weights    float32 `json:"weights,omitempty"`
 
 			// in seconds
 			RestAfter int  `json:"rest_after,omitempty"`
@@ -81,12 +81,92 @@ func (app *Application) createWorkoutHandler(w http.ResponseWriter, r *http.Requ
 		NumberOfExercises: len(workoutExercises),
 	}
 
+	v := validator.New()
+	workout.Validate(v)
+
+	if !v.Valid() {
+		FailedValidationResponse(w, r, v.Errors)
+		return
+	}
+
 	if err := app.models.Workouts.Create(workout); err != nil {
 		ServerErrorResponse(w, r, err)
 		return
 	}
 
 	err = app.writeJSON(w, http.StatusCreated, envelope{"workout": workout}, nil)
+	if err != nil {
+		ServerErrorResponse(w, r, err)
+	}
+}
+
+func (app *Application) getWorkoutsHandler(w http.ResponseWriter, r *http.Request) {
+	// get user id
+	user, ok := getUser(r)
+	if !ok {
+		UnauthorizedResponse(w, r)
+		return
+	}
+
+	workouts, err := app.models.Workouts.GetAllByID(user.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, model.ErrNotFound):
+			NotFoundResponse(w, r)
+		default:
+			ServerErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	v := validator.New()
+	for _, workout := range workouts {
+		workout.Validate(v)
+		if !v.Valid() {
+			FailedValidationResponse(w, r, v.Errors)
+			return
+		}
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"workouts": workouts}, nil)
+	if err != nil {
+		ServerErrorResponse(w, r, err)
+	}
+}
+
+func (app *Application) getWorkoutHandler(w http.ResponseWriter, r *http.Request) {
+	// get user id
+	user, ok := getUser(r)
+	if !ok {
+		UnauthorizedResponse(w, r)
+		return
+	}
+
+	id, err := app.readIDParam(r)
+	if err != nil {
+		BadRequestResponse(w, r, err)
+		return
+	}
+
+	workout, err := app.models.Workouts.GetWorkoutByID(user.ID, int(id))
+	if err != nil {
+		switch {
+		case errors.Is(err, model.ErrNotFound):
+			NotFoundResponse(w, r)
+		default:
+			ServerErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	v := validator.New()
+	workout.Validate(v)
+	if !v.Valid() {
+		FailedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"workout": workout}, nil)
 	if err != nil {
 		ServerErrorResponse(w, r, err)
 	}
