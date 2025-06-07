@@ -12,7 +12,7 @@ import (
 
 type Workout struct {
 	ID                int               `json:"id"`
-	UserID            int               `json:"-"`
+	OwnerID           int               `json:"-"`
 	Name              string            `json:"name"`
 	Exercises         []WorkoutExercise `json:"exercises"`
 	NumberOfExercises int               `json:"number_of_exercises,omitempty"`
@@ -75,42 +75,26 @@ func (r *WorkoutRepository) Create(workout *Workout) error {
 	}
 
 	query := `
-	INSERT INTO workouts(name)
-	VALUES ($1)
+	INSERT INTO workouts(owner_id, name)
+	VALUES ($1, $2)
 	RETURNING id, version
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = tx.QueryRowContext(ctx, query, workout.Name).Scan(
+	err = tx.QueryRowContext(ctx, query, workout.OwnerID, workout.Name).Scan(
 		&workout.ID,
 		&workout.Version,
 	)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("error inserting to workouts: %w", err)
 	}
 
 	query = `
-	INSERT INTO workouts_users(workout_id, user_id)
-	VALUES ($1, $2)
-	`
-
-	result, err := tx.ExecContext(ctx, query, workout.ID, workout.UserID)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	n, err := result.RowsAffected()
-	if err != nil || n == 0 {
-		tx.Rollback()
-		return err
-	}
-
-	query = `
-	INSERT INTO workouts_exercises(workout_id, exercise_id, exercise_order, sets, reps, weights, rest_after, done)
+	INSERT INTO workouts_exercises(workout_id, exercise_id, exercise_order,
+	sets, reps, weights, rest_after, done)
 	VALUES($1, $2, $3, $4, $5, $6, $7, $8)
 	RETURNING id, version
 	`
@@ -132,7 +116,7 @@ func (r *WorkoutRepository) Create(workout *Workout) error {
 		)
 		if err != nil {
 			tx.Rollback()
-			return err
+			return fmt.Errorf("error inserting to workouts_exercises: %w", err)
 		}
 	}
 
@@ -144,7 +128,7 @@ func (r *WorkoutRepository) Create(workout *Workout) error {
 	return nil
 }
 
-func (r *WorkoutRepository) GetAllByID(userID int) ([]*Workout, error) {
+func (r *WorkoutRepository) GetAllByID(ownerID int) ([]*Workout, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, err
@@ -152,16 +136,15 @@ func (r *WorkoutRepository) GetAllByID(userID int) ([]*Workout, error) {
 
 	// get basic info of each workout (not including exercises)
 	query := `
-	SELECT w.id, w.name, w.version
-	FROM workouts AS w
-	JOIN workouts_users AS wu ON w.id = wu.workout_id
-	WHERE wu.user_id = $1
+	SELECT id, owner_id, name, version
+	FROM workouts
+	WHERE owner_id = $1
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	rows, err := tx.QueryContext(ctx, query, userID)
+	rows, err := tx.QueryContext(ctx, query, ownerID)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -172,12 +155,13 @@ func (r *WorkoutRepository) GetAllByID(userID int) ([]*Workout, error) {
 	}
 	defer rows.Close()
 
-	var workouts []*Workout
+	workouts := make([]*Workout, 0)
 
 	for rows.Next() {
-		workout := Workout{UserID: userID}
+		workout := Workout{OwnerID: ownerID}
 		err := rows.Scan(
 			&workout.ID,
+			&workout.OwnerID,
 			&workout.Name,
 			&workout.Version,
 		)
@@ -249,22 +233,21 @@ func (r *WorkoutRepository) GetAllByID(userID int) ([]*Workout, error) {
 	return workouts, nil
 }
 
-func (r *WorkoutRepository) GetWorkoutByID(userID, workoutID int) (*Workout, error) {
+func (r *WorkoutRepository) GetWorkoutByID(ownerID, workoutID int) (*Workout, error) {
 	query := `
-	SELECT w.id, w.name, w.version, we.id, we.exercise_order, we.sets,
+	SELECT w.name, w.version, we.id, we.exercise_order, we.sets,
 	we.reps, we.weights, we.rest_after, we.done, we.version, e.id, e.name,
 	e.muscle, e.instructions, e.additional_info, e.image_url, e.version
 	FROM workouts AS w
 	JOIN workouts_exercises AS we ON w.id = we.workout_id
-	JOIN workouts_users AS wu ON w.id = wu.workout_id
 	JOIN exercises AS e ON we.exercise_id = e.id
-	WHERE wu.user_id = $1 AND w.id = $2
+	WHERE w.owner_id = $1 AND w.id = $2
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	rows, err := r.db.QueryContext(ctx, query, userID, workoutID)
+	rows, err := r.db.QueryContext(ctx, query, ownerID, workoutID)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -275,14 +258,16 @@ func (r *WorkoutRepository) GetWorkoutByID(userID, workoutID int) (*Workout, err
 	}
 	defer rows.Close()
 
-	workout := &Workout{UserID: userID}
+	workout := &Workout{
+		OwnerID: ownerID,
+		ID:      workoutID,
+	}
 
 	for rows.Next() {
 		var workoutExercise WorkoutExercise
 		var exercise Exercise
 
 		err := rows.Scan(
-			&workout.ID,
 			&workout.Name,
 			&workout.Version,
 			&workoutExercise.ID,
@@ -315,4 +300,92 @@ func (r *WorkoutRepository) GetWorkoutByID(userID, workoutID int) (*Workout, err
 	}
 
 	return workout, nil
+}
+
+func (r *WorkoutRepository) Update(workout *Workout) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	query := `
+	UPDATE workouts SET name = $1, version = version + 1
+	WHERE id = $2 AND version = $3
+	RETURNING version
+	`
+	args := []any{workout.Name, workout.ID, workout.Version}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = tx.QueryRowContext(ctx, query, args...).Scan(&workout.Version)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+
+	query = `DELETE from workouts_exercises WHERE workout_id = $1`
+	_, err = tx.ExecContext(ctx, query, workout.ID)
+	if err != nil {
+		return err
+	}
+
+	query = `
+	INSERT INTO workouts_exercises(workout_id, exercise_id, exercise_order, sets, reps, weights, rest_after, done)
+	VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+	RETURNING id, version
+	`
+
+	for i, exercise := range workout.Exercises {
+		args := []any{
+			workout.ID,
+			exercise.Exercise.ID,
+			exercise.Order,
+			exercise.Sets,
+			exercise.Reps,
+			exercise.Weights,
+			exercise.RestAfter,
+			exercise.Done,
+		}
+		err := tx.QueryRowContext(ctx, query, args...).Scan(
+			&workout.Exercises[i].ID,
+			&workout.Exercises[i].Version,
+		)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *WorkoutRepository) Delete(ownerID, workoutID int) error {
+	query := `DELETE FROM workouts WHERE id = $1 AND owner_id = $2`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := r.db.ExecContext(ctx, query, workoutID, ownerID)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrNotFound
+		default:
+			return err
+		}
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	} else if affected == 0 {
+		return ErrNotFound
+	}
+
+	return nil
 }

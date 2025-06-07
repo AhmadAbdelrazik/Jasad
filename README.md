@@ -92,8 +92,8 @@ type Config struct {
 * `POST /v1/workouts` — Create workout
 * `GET /v1/workouts` — List workouts
 * `GET /v1/workouts/{id}` — Get workout by ID
-* `PATCH /v1/workouts` — Update workout
-* `DELETE /v1/workouts` — Delete workout
+* `PATCH /v1/workouts/{id}` — Update workout
+* `DELETE /v1/workouts/{id}` — Delete workout
 
 ---
 

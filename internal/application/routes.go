@@ -22,8 +22,10 @@ func (app *Application) Routes() http.Handler {
 	mux.HandleFunc("GET /v1/users/{id}", app.IsAuthorized(app.getUserByIDHandler, model.RoleUser))
 
 	mux.HandleFunc("POST /v1/workouts", app.IsAuthorized(app.createWorkoutHandler, model.RoleUser))
-	mux.HandleFunc("GET /v1/workouts", app.IsAuthorized(app.getWorkoutsHandler, model.RoleUser))
+	mux.HandleFunc("GET /v1/workouts", app.IsAuthorized(app.getAllWorkoutsHandler, model.RoleUser))
 	mux.HandleFunc("GET /v1/workouts/{id}", app.IsAuthorized(app.getWorkoutHandler, model.RoleUser))
+	mux.HandleFunc("PUT /v1/workouts/{id}", app.IsAuthorized(app.updateWorkoutHandler, model.RoleUser))
+	mux.HandleFunc("DELETE /v1/workouts/{id}", app.IsAuthorized(app.deleteWorkoutHandler, model.RoleUser))
 
 	return app.recoverPanic(app.rateLimit(mux))
 }

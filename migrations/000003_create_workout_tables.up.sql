@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS workouts(
 	id SERIAL PRIMARY KEY,
+	owner_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 	name VARCHAR(50) NOT NULL,
 	version INT NOT NULL DEFAULT 1
 );
@@ -15,11 +16,4 @@ CREATE TABLE IF NOT EXISTS workouts_exercises(
 	rest_after INT NOT NULL,
 	done bool NOT NULL,
 	version INT NOT NULL DEFAULT 1
-);
-
-CREATE TABLE IF NOT EXISTS workouts_users(
-	id SERIAL PRIMARY KEY,
-	workout_id INT NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
-	user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-	CONSTRAINT workout_user_constraint UNIQUE(user_id, workout_id)
 );
